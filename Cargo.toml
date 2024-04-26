@@ -3,6 +3,19 @@ name = "logseq-linter"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[profile.dev]
+opt-level = 0
+debug = true
+
+[profile.release]
+opt-level = 3
+debug = false
+
+[dev-dependencies]
+just = "1.23.0"
 
 [dependencies]
+async-openai = "0.20.0"
+markdown-rs = "0.1.0"
+meilisearch-sdk = "0.25.0"
+petgraph = "0.6.4"

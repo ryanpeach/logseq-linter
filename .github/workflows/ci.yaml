@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  rust:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install rustup
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        profile: minimal
+        override: true
+
+    - name: Install cargo fmt, clippy
+      run: rustup component add rustfmt clippy
+
+    - name: Check Code Formatting
+      run: cargo fmt -- --check
+
+    - name: Check Code Linting
+      run: cargo clippy --all-targets --all-features -- -D warnings
+
+    - name: Build
+      run: cargo build --verbose
+
+    - name: Install wasm-pack
+      run: |
+        curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+    - name: Build WASM
+      run: wasm-pack build
+
+    - name: Install tarpaulin
+      run: cargo install cargo-tarpaulin
+
+    - name: Run docker compose
+      run: docker-compose up -d
+      
+    - name: Run tests and collect coverage
+      run: cargo tarpaulin --verbose --all-features --workspace --out xml
+      continue-on-error: true
+
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v3
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
