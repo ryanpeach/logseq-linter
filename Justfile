@@ -12,13 +12,23 @@ fix:
 
 # Build literally everything
 build:
-  cargo build --all-targets
+  cargo build
 
 check:
+  docker-compose up -d
   cargo test
   cargo check --all-targets
   cargo clippy --all-targets
 
+test:
+  docker-compose up -d
+  cargo test
+
+run:
+  docker-compose up -d
+  cargo run
+
 doc:
+  mkdir -p doc/assets
   cp -r assets/docs target/doc/assets
   RUSTDOCFLAGS="--html-in-header katex-header.html" cargo doc --no-deps --open
