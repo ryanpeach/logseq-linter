@@ -43,10 +43,10 @@ impl TypeEnum {
         let tag_re2 = Regex::new(TAG_REGEX2).unwrap();
         let combined_re = Regex::new(&combined_regex).unwrap();
         for cap in combined_re.split(&text) {
-            if backlink_re.is_match(cap) {
-                type_enums.push(TypeEnum::Backlink(cap.to_string()));
-            } else if tag_re1.is_match(cap) || tag_re2.is_match(cap) {
+            if tag_re1.is_match(cap) || tag_re2.is_match(cap) {
                 type_enums.push(TypeEnum::Tag(cap.to_string()));
+            } if backlink_re.is_match(cap) {
+                type_enums.push(TypeEnum::Backlink(cap.to_string()));
             } else {
                 type_enums.push(TypeEnum::Text(cap.to_string()));
             }
