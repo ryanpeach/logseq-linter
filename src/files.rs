@@ -2,8 +2,8 @@
 
 use glob::Pattern;
 use markdown::mdast;
-use walkdir::WalkDir;
 use std::path::Path;
+use walkdir::WalkDir;
 
 /// Walks a directory tree and yields files matching a glob pattern.
 pub struct MdWalker {
@@ -35,8 +35,10 @@ impl Iterator for MdWalker {
                     };
                     let ast = markdown::to_mdast(&content, &markdown::ParseOptions::default());
                     match ast {
-                        Ok(ast) => return Some(Ok((e.path().to_path_buf().into_boxed_path(), ast))),
-                        Err(msg) => return Some(Err(msg.to_string()))
+                        Ok(ast) => {
+                            return Some(Ok((e.path().to_path_buf().into_boxed_path(), ast)))
+                        }
+                        Err(msg) => return Some(Err(msg.to_string())),
                     }
                 }
                 Err(msg) => return Some(Err(msg.to_string())),

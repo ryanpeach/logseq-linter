@@ -1,9 +1,9 @@
 //! These define the data structures for logseq files
-use std::path::Path;
 use markdown::mdast::{ListItem, Node};
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use regex::Regex;
+use std::path::Path;
 
 /// These are the relevant types in a logseq block for our purposes
 #[derive(Serialize, Deserialize, Debug)]
@@ -61,16 +61,16 @@ impl Block {
         let mut content = Vec::new();
         let mut sub_blocks = Vec::new();
         for child in list_item.children.iter() {
-            if let Node::List ( list ) = child {
+            if let Node::List(list) = child {
                 for child in list.children.iter() {
-                    if let Node::ListItem ( list_item ) = child {
+                    if let Node::ListItem(list_item) = child {
                         let block = Block::new(sub_blocks.len(), list_item);
                         sub_blocks.push(block);
                     }
                 }
-            } else if let Node::Paragraph ( paragraph ) = child {
+            } else if let Node::Paragraph(paragraph) = child {
                 for child in paragraph.children.iter() {
-                    if let Node::Text ( text ) = child {
+                    if let Node::Text(text) = child {
                         content.extend(TypeEnum::from_text(text.value.clone()))
                     }
                 }
@@ -112,16 +112,17 @@ impl File {
         let mut tags = HashMap::new();
         let children = ast.children().expect("No children");
         for child in children {
-            if let Node::Paragraph ( paragraph ) = child {
+            if let Node::Paragraph(paragraph) = child {
                 for child in paragraph.children.iter() {
-                    if let Node::Text ( text ) = child {
+                    if let Node::Text(text) = child {
                         for line in text.value.lines() {
                             let split = line.split("::");
                             if let [key, values] = split.collect::<Vec<&str>>().as_slice() {
                                 let key = key.trim();
                                 let values = values.trim();
                                 let values_split: Vec<&str> = values.split(',').collect();
-                                let trim_values_split: Vec<&str> = values_split.iter().map(|x| x.trim()).collect();
+                                let trim_values_split: Vec<&str> =
+                                    values_split.iter().map(|x| x.trim()).collect();
                                 let mut type_enums = Vec::new();
                                 for value in trim_values_split {
                                     type_enums.push(TypeEnum::from_csv_item(value.to_string()));
@@ -143,9 +144,9 @@ impl File {
         let mut blocks = Vec::new();
         let children = ast.children().expect("No children");
         for child in children.iter() {
-            if let Node::List ( list ) = child {
+            if let Node::List(list) = child {
                 for child in list.children.iter() {
-                    if let Node::ListItem ( list_item ) = child {
+                    if let Node::ListItem(list_item) = child {
                         let block = Block::new(blocks.len(), list_item);
                         blocks.push(block);
                     }

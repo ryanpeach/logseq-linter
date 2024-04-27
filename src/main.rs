@@ -4,13 +4,13 @@
 #[macro_use]
 
 mod meilisearch;
-mod logseq;
 mod files;
+mod logseq;
 use std::path::Path;
 
+use clap::{command, Parser};
 use dotenv::dotenv;
 use indicatif::ProgressIterator;
-use clap::{command, Parser};
 use logseq::File;
 use markdown::mdast;
 use meilisearch_sdk::Client;
@@ -19,9 +19,9 @@ use std::env;
 use lazy_static::lazy_static;
 
 lazy_static! {
-    static ref MEILISEARCH_URL: String = 
+    static ref MEILISEARCH_URL: String =
         env::var("MEILISEARCH_URL").unwrap_or_else(|_| "http://localhost:7700".to_string());
-    static ref MEILISEARCH_API_KEY: String = 
+    static ref MEILISEARCH_API_KEY: String =
         env::var("MEILISEARCH_API_KEY").unwrap_or_else(|_| "masterKey".to_string());
 }
 
@@ -48,10 +48,14 @@ async fn main() {
     let args = Args::parse();
     let walker = files::MdWalker::new(args.path.to_str().unwrap());
     let mut i = 0;
-    for file in walker.into_iter().collect::<Vec<Result<(Box<Path>, mdast::Node), String>>>().iter().progress() {
+    for file in walker
+        .into_iter()
+        .collect::<Vec<Result<(Box<Path>, mdast::Node), String>>>()
+        .iter()
+        .progress()
+    {
         let doc = match file {
             Ok((path, ast)) => {
-                
                 // println!("{:?}", out);
                 File::new(i, ast, path.clone())
             }
