@@ -15,7 +15,7 @@ pub enum TypeEnum {
 
 impl TypeEnum {
     pub fn from_csv_item(item: String) -> TypeEnum {
-        if item.starts_with("#") {
+        if item.starts_with('#') {
             TypeEnum::Tag(item)
         } else if item.starts_with("[[") && item.ends_with("]]") {
             TypeEnum::Backlink(item)
@@ -29,7 +29,7 @@ impl TypeEnum {
         const BACKLINK_REGEX: &str = r"\[\[.*?\]\]";
         const TAG_REGEX1: &str = r"#\w+";
         const TAG_REGEX2: &str = r"#\[\[.*?\]\]";
-        let combined_regex: String = format!("{}|{}|{}", BACKLINK_REGEX.to_string(), TAG_REGEX1.to_string(), TAG_REGEX2.to_string());
+        let combined_regex: String = format!("{}|{}|{}", BACKLINK_REGEX, TAG_REGEX1, TAG_REGEX2);
         let backlink_re = Regex::new(BACKLINK_REGEX).unwrap();
         let tag_re1 = Regex::new(TAG_REGEX1).unwrap();
         let tag_re2 = Regex::new(TAG_REGEX2).unwrap();
@@ -120,7 +120,7 @@ impl File {
                             if let [key, values] = split.collect::<Vec<&str>>().as_slice() {
                                 let key = key.trim();
                                 let values = values.trim();
-                                let values_split: Vec<&str> = values.split(",").collect();
+                                let values_split: Vec<&str> = values.split(',').collect();
                                 let trim_values_split: Vec<&str> = values_split.iter().map(|x| x.trim()).collect();
                                 let mut type_enums = Vec::new();
                                 for value in trim_values_split {
