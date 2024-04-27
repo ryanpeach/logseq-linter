@@ -7,7 +7,9 @@ use walkdir::WalkDir;
 
 /// Walks a directory tree and yields files matching a glob pattern.
 pub struct MdWalker {
+    /// The underlying directory walker.
     walker: walkdir::IntoIter,
+    /// The glob pattern to match.
     pattern: Pattern,
 }
 

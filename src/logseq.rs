@@ -31,8 +31,11 @@ impl TypeEnum {
     /// Create a `Vec<TypeEnum>` from a normal text string
     pub fn from_text(text: String) -> Vec<TypeEnum> {
         let mut type_enums = Vec::new();
+        /// The regex for a backlink
         const BACKLINK_REGEX: &str = r"\[\[.*?\]\]";
+        /// The regex for a single word tag
         const TAG_REGEX1: &str = r"#\w+";
+        /// The regex for a tag with spaces
         const TAG_REGEX2: &str = r"#\[\[.*?\]\]";
         let combined_regex: String = format!("{}|{}|{}", BACKLINK_REGEX, TAG_REGEX1, TAG_REGEX2);
         let backlink_re = Regex::new(BACKLINK_REGEX).unwrap();
