@@ -15,7 +15,7 @@ use logseq::File;
 use markdown::mdast;
 use meilisearch_sdk::Client;
 use std::env;
-use tokio;
+
 use lazy_static::lazy_static;
 
 lazy_static! {
@@ -51,9 +51,9 @@ async fn main() {
     for file in walker.into_iter().collect::<Vec<Result<(Box<Path>, mdast::Node), String>>>().iter().progress() {
         let doc = match file {
             Ok((path, ast)) => {
-                let out = File::new(i, ast, path.clone());
+                
                 // println!("{:?}", out);
-                out
+                File::new(i, ast, path.clone())
             }
             Err(msg) => {
                 eprintln!("{}", msg);

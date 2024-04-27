@@ -26,7 +26,7 @@ impl Iterator for MdWalker {
 
     /// Get the next file matching the pattern. Returns the markdown AST.
     fn next(&mut self) -> Option<Self::Item> {
-        while let Some(entry) = self.walker.next() {
+        for entry in self.walker.by_ref() {
             match entry {
                 Ok(e) if self.pattern.matches_path(Path::new(e.path())) => {
                     let content = match std::fs::read_to_string(e.path()) {
