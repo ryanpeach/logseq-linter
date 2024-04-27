@@ -22,7 +22,7 @@ impl MdWalker {
 }
 
 impl Iterator for MdWalker {
-    type Item = Result<mdast::Node, String>;
+    type Item = Result<(Box<Path>, mdast::Node), String>;
 
     /// Get the next file matching the pattern. Returns the markdown AST.
     fn next(&mut self) -> Option<Self::Item> {
@@ -35,7 +35,7 @@ impl Iterator for MdWalker {
                     };
                     let ast = markdown::to_mdast(&content, &markdown::ParseOptions::default());
                     match ast {
-                        Ok(ast) => return Some(Ok(ast)),
+                        Ok(ast) => return Some(Ok((e.path().to_path_buf().into_boxed_path(), ast))),
                         Err(msg) => return Some(Err(msg.to_string()))
                     }
                 }

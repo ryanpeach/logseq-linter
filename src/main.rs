@@ -9,9 +9,10 @@ mod files;
 use std::path::Path;
 
 use dotenv::dotenv;
-
+use indicatif::ProgressIterator;
 use clap::{command, Parser};
 use logseq::File;
+use markdown::mdast;
 use meilisearch_sdk::Client;
 use std::env;
 use tokio;
@@ -47,9 +48,13 @@ async fn main() {
     let args = Args::parse();
     let walker = files::MdWalker::new(args.path.to_str().unwrap());
     let mut i = 0;
-    for file in walker {
+    for file in walker.into_iter().collect::<Vec<Result<(Box<Path>, mdast::Node), String>>>().iter().progress() {
         let doc = match file {
-            Ok(ast) => File::new(i, ast, args.path.clone()),
+            Ok((path, ast)) => {
+                let out = File::new(i, ast, path.clone());
+                // println!("{:?}", out);
+                out
+            }
             Err(msg) => {
                 eprintln!("{}", msg);
                 continue;
