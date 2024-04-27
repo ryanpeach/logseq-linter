@@ -35,13 +35,6 @@ jobs:
     - name: Build
       run: cargo build --verbose
 
-    - name: Install wasm-pack
-      run: |
-        curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-
-    - name: Build WASM
-      run: wasm-pack build
-
     - name: Install tarpaulin
       run: cargo install cargo-tarpaulin
 
