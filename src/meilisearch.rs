@@ -1,3 +1,4 @@
+//! Meilisearch is a powerful, fast, open-source, easy to use text search engine.
 
 /// Taken from meilisearch readme
 #[cfg(test)]
