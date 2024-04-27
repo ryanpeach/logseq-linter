@@ -46,7 +46,7 @@ impl TypeEnum {
             if tag_re1.is_match(cap) || tag_re2.is_match(cap) {
                 type_enums.push(TypeEnum::Tag(cap.to_string()));
             }
-            if backlink_re.is_match(cap) {
+            else if backlink_re.is_match(cap) {
                 type_enums.push(TypeEnum::Backlink(cap.to_string()));
             } else {
                 type_enums.push(TypeEnum::Text(cap.to_string()));
