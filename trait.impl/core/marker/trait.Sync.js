@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"logseq_linter":[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.77.2/core/marker/trait.Sync.html\" title=\"trait core::marker::Sync\">Sync</a> for <a class=\"struct\" href=\"logseq_linter/struct.Args.html\" title=\"struct logseq_linter::Args\">Args</a>",1,["logseq_linter::Args"]]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
