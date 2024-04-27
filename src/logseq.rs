@@ -8,12 +8,16 @@ use std::path::Path;
 /// These are the relevant types in a logseq block for our purposes
 #[derive(Serialize, Deserialize, Debug)]
 pub enum TypeEnum {
+    /// Normal text
     Text(String),
+    /// A backlink like [[this]]
     Backlink(String),
+    /// A tag like #this or #[[this]]
     Tag(String),
 }
 
 impl TypeEnum {
+    /// Create a `TypeEnum` from a CSV item like after a attribute
     pub fn from_csv_item(item: String) -> TypeEnum {
         if item.starts_with('#') {
             TypeEnum::Tag(item)
@@ -24,6 +28,7 @@ impl TypeEnum {
         }
     }
 
+    /// Create a `Vec<TypeEnum>` from a normal text string
     pub fn from_text(text: String) -> Vec<TypeEnum> {
         let mut type_enums = Vec::new();
         const BACKLINK_REGEX: &str = r"\[\[.*?\]\]";
@@ -50,8 +55,11 @@ impl TypeEnum {
 /// This is a logseq block, which is a markdown list element
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Block {
+    /// The index of the block in the list
     pub idx: usize,
+    /// The text content of the block divided into types
     pub content: Vec<TypeEnum>,
+    /// The sub blocks of this block
     pub sub_blocks: Vec<Block>,
 }
 
@@ -87,9 +95,13 @@ impl Block {
 /// This is a markdown file in logseq
 #[derive(Serialize, Deserialize, Debug)]
 pub struct File {
+    /// The id of the file
     pub id: usize,
+    /// The path of the file
     pub path: Box<Path>,
-    pub tags: HashMap<String, Vec<TypeEnum>>,
+    /// The markdown attributes of the file
+    pub attributes: HashMap<String, Vec<TypeEnum>>,
+    /// The markdown list elements of the file
     pub blocks: Vec<Block>,
 }
 
@@ -99,7 +111,7 @@ impl File {
         File {
             id,
             path,
-            tags: File::get_tags(ast),
+            attributes: File::get_attributes(ast),
             blocks: File::get_blocks(ast),
         }
     }
@@ -108,8 +120,8 @@ impl File {
     /// They are at the top of the file
     /// Root { children: [Paragraph { children: [Text { value:
     /// Before List
-    fn get_tags(ast: &Node) -> HashMap<String, Vec<TypeEnum>> {
-        let mut tags = HashMap::new();
+    fn get_attributes(ast: &Node) -> HashMap<String, Vec<TypeEnum>> {
+        let mut attributes = HashMap::new();
         let children = ast.children().expect("No children");
         for child in children {
             if let Node::Paragraph(paragraph) = child {
@@ -127,14 +139,14 @@ impl File {
                                 for value in trim_values_split {
                                     type_enums.push(TypeEnum::from_csv_item(value.to_string()));
                                 }
-                                tags.insert(key.to_string(), type_enums);
+                                attributes.insert(key.to_string(), type_enums);
                             }
                         }
                     }
                 }
             }
         }
-        tags
+        attributes
     }
 
     /// Get the blocks from the AST
