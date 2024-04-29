@@ -78,11 +78,41 @@ impl BlockBuilder {
     }
 
     fn get_wikilinks(_content: &str) -> Vec<String> {
-        todo!("Get the wikilinks from the content")
+        // [[something]] but not #[[something]]
+        let re = Regex::new(r"\s\[\[([\w\s]+)\]\]").unwrap();
+        let mut wikilinks = vec![];
+        for captures in re.captures_iter(_content) {
+            assert_eq!(
+                captures.len(),
+                2,
+                "There should be the full capture and the wikilink: {:?}",
+                captures
+            );
+            wikilinks.push(captures[1].trim().to_string());
+        }
+        wikilinks
     }
 
     fn get_tags(_content: &str) -> Vec<String> {
-        todo!("Get the tags from the content")
+        // #something or #[[something]]
+        let re = Regex::new(r"(?i)#\[\[([\w\s]+)\]\]|#(\w+)").unwrap();
+        let mut tags = vec![];
+        for captures in re.captures_iter(_content) {
+            assert_eq!(
+                captures.len(),
+                3,
+                "There should be the full capture and the tag: {:?}",
+                captures
+            );
+            if let Some(tag) = captures.get(1) {
+                tags.push(tag.as_str().to_string());
+            } else if let Some(tag) = captures.get(2) {
+                tags.push(tag.as_str().to_string());
+            } else {
+                panic!("No tag found");
+            }
+        }
+        tags
     }
 
     pub fn build(self) -> Result<Vec<Block>, String> {
@@ -140,35 +170,6 @@ pub struct Block {
     /// The wikilinks in the block
     pub wikilinks: Vec<String>,
 }
-
-// impl Block {
-//     /// ListItem { children: [List { children: [ListItem { children: [Paragraph { children: [Text { value:
-//     pub fn new(idx: usize, list_item: &ListItem) -> Block {
-//         let mut content = Vec::new();
-//         let mut sub_blocks = Vec::new();
-//         for child in list_item.children.iter() {
-//             if let Node::List(list) = child {
-//                 for child in list.children.iter() {
-//                     if let Node::ListItem(list_item) = child {
-//                         let block = Block::new(sub_blocks.len(), list_item);
-//                         sub_blocks.push(block);
-//                     }
-//                 }
-//             } else if let Node::Paragraph(paragraph) = child {
-//                 for child in paragraph.children.iter() {
-//                     if let Node::Text(text) = child {
-//                         content.extend(TypeEnum::from_text(text.value.clone()))
-//                     }
-//                 }
-//             }
-//         }
-//         Block {
-//             idx,
-//             content,
-//             sub_blocks,
-//         }
-//     }
-// }
 
 #[cfg(test)]
 mod tests {
@@ -291,23 +292,54 @@ mod tests {
             }
         }
 
-        #[test]
-        fn test_get_wikilinks() {
-            todo!("Test get_wikilinks")
-        }
+        mod links {
+            use super::*;
 
-        #[test]
-        fn test_get_tags() {
-            todo!("Test get_tags")
-        }
-    }
+            fn get_content() -> String {
+                let content = std::fs::read_to_string(
+                    "graph/pages/tests___parsing___blocks___tags_wikilinks.md",
+                )
+                .unwrap();
+                let ast = markdown::to_mdast(&content, &markdown::ParseOptions::default()).unwrap();
+                let list_items: Vec<&ListItem> = ast
+                    .children()
+                    .unwrap()
+                    .iter()
+                    .filter_map(|child| match child {
+                        Node::List(list) => Some(list),
+                        _ => None,
+                    })
+                    .flat_map(|list| list.children.iter())
+                    .filter_map(|child| match child {
+                        Node::ListItem(list_item) => Some(list_item),
+                        _ => None,
+                    })
+                    .collect();
+                let first = BlockBuilder::new()
+                    .with_list_item(list_items[0].clone())
+                    .with_file_path(
+                        std::path::PathBuf::from(
+                            "graph/pages/tests___parsing___blocks___tags_wikilinks.md",
+                        )
+                        .into(),
+                    )
+                    .get_content();
+                first.unwrap()
+            }
 
-    mod block {
-        use super::*;
+            #[test]
+            fn test_get_wikilinks() {
+                let content = get_content();
+                let wikilinks = BlockBuilder::get_wikilinks(&content);
+                assert_eq!(wikilinks, vec!["wikilink"]);
+            }
 
-        #[test]
-        fn test_build() {
-            todo!("Test build")
+            #[test]
+            fn test_get_tags() {
+                let content = get_content();
+                let tags = BlockBuilder::get_tags(&content);
+                assert_eq!(tags, vec!["multi word tag", "tag"]);
+            }
         }
     }
 }
