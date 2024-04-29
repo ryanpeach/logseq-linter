@@ -186,15 +186,15 @@ mod tests {
                 std::fs::read_to_string("graph/pages/tests___parsing___files___basic.md").unwrap();
             let ast = markdown::to_mdast(&content, &markdown::ParseOptions::default()).unwrap();
 
-            let file = FileBuilder::new()
+            
+            FileBuilder::new()
                 .with_path(
                     std::path::PathBuf::from("graph/pages/tests___parsing___files___basic.md")
                         .into(),
                 )
                 .with_ast(ast)
                 .build()
-                .unwrap();
-            file
+                .unwrap()
         }
 
         #[test]
