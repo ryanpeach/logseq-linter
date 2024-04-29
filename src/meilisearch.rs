@@ -1,12 +1,28 @@
 //! Meilisearch is a powerful, fast, open-source, easy to use text search engine.
+use meilisearch_sdk::Client;
+use std::env;
+
+pub struct Meilisearch {
+    pub client: Client,
+}
+
+impl Meilisearch {
+    pub fn new() -> Meilisearch {
+        let url =
+            env::var("MEILISEARCH_URL").unwrap_or_else(|_| "http://localhost:7700".to_string());
+        let api_key = env::var("MEILISEARCH_API_KEY").unwrap_or_else(|_| "masterKey".to_string());
+        let client = Client::new(url, Some(api_key));
+        Meilisearch { client }
+    }
+}
 
 /// Taken from meilisearch readme
 #[cfg(test)]
 mod tests {
     use dotenv::dotenv;
-    use meilisearch_sdk::client::*;
     use serde::{Deserialize, Serialize};
-    use std::env;
+
+    use super::Meilisearch;
 
     #[derive(Serialize, Deserialize, Debug)]
     struct Movie {
@@ -18,13 +34,9 @@ mod tests {
     #[tokio::test]
     async fn test_add_documents_and_search() {
         dotenv().ok();
-        let meilisearch_url =
-            env::var("MEILISEARCH_URL").unwrap_or("http://localhost:7700".to_string());
-        let meilisearch_api_key =
-            env::var("MEILISEARCH_API_KEY").unwrap_or("masterKey".to_string());
 
         // Create a client (without sending any request so that can't fail)
-        let client = Client::new(meilisearch_url, Some(meilisearch_api_key));
+        let client = Meilisearch::new().client;
 
         // An index is where the documents are stored.
         let movies = client.index("movies");
