@@ -4,7 +4,6 @@ use markdown::mdast::Node;
 use serde::{Deserialize, Serialize};
 
 pub struct FileBuilder {
-    id: usize,
     path: Option<Box<Path>>,
     ast: Option<Node>,
 }
@@ -12,7 +11,6 @@ pub struct FileBuilder {
 impl FileBuilder {
     pub fn new() -> FileBuilder {
         FileBuilder {
-            id: uuid::Uuid::new_v4().as_u128() as usize,
             path: None,
             ast: None,
         }
@@ -28,35 +26,45 @@ impl FileBuilder {
         self
     }
 
-    fn get_properties(&self) -> HashMap<String, String> {
-        let _ast = self.ast.as_ref().expect("No AST");
+    fn get_id(_ast: &Node) -> String {
+        todo!("Get the id from the content");
+    }
+
+    fn get_properties(_ast: &Node) -> HashMap<String, String> {
         todo!("Get the properties from the AST")
     }
 
-    fn get_wikilinks(&self) -> Vec<String> {
-        let _ast = self.ast.as_ref().expect("No AST");
+    fn get_wikilinks(_ast: &Node) -> Vec<String> {
         todo!("Get the wikilinks from the AST")
     }
 
-    fn get_tags(&self) -> Vec<String> {
-        let _ast = self.ast.as_ref().expect("No AST");
+    fn get_tags(_ast: &Node) -> Vec<String> {
         todo!("Get the tags from the AST")
     }
 
-    fn get_title(&self) -> String {
-        let _ast = self.ast.as_ref().expect("No AST");
+    fn get_title(_ast: &Node) -> String {
         todo!("Get the title from the AST")
     }
 
     pub fn build(mut self) -> File {
-        let _ast = self.ast.take().expect("No AST");
-        let properties = self.get_properties();
-        let wikilinks = self.get_wikilinks();
-        let tags = self.get_tags();
-        let title = self.get_title();
+        let ast = self.ast.take().expect("No AST");
+        let path = self
+            .path
+            .take()
+            .expect("No path")
+            .file_name()
+            .expect("No file name")
+            .to_str()
+            .expect("No file name")
+            .to_string();
+        let id = Self::get_id(&ast);
+        let properties = Self::get_properties(&ast);
+        let wikilinks = Self::get_wikilinks(&ast);
+        let tags = Self::get_tags(&ast);
+        let title = Self::get_title(&ast);
         File {
-            id: self.id,
-            path: self.path.expect("No path").to_string_lossy().to_string(),
+            id,
+            path,
             title,
             properties,
             wikilinks,
@@ -69,7 +77,7 @@ impl FileBuilder {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct File {
     /// The id of the file
-    pub id: usize,
+    pub id: String,
     /// The path of the file
     pub path: String,
     /// The title of the file
@@ -135,3 +143,41 @@ pub struct File {
 //         blocks
 //     }
 // }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    mod builder {
+        use super::*;
+
+        #[test]
+        fn test_get_properties() {
+            todo!("Test get_properties")
+        }
+
+        #[test]
+        fn test_get_wikilinks() {
+            todo!("Test get_wikilinks")
+        }
+
+        #[test]
+        fn test_get_tags() {
+            todo!("Test get_tags")
+        }
+
+        #[test]
+        fn test_get_title() {
+            todo!("Test get_title")
+        }
+    }
+
+    mod file {
+        use super::*;
+
+        #[test]
+        fn test_build() {
+            todo!("Test build")
+        }
+    }
+}

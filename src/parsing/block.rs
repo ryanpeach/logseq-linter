@@ -1,17 +1,17 @@
+use std::collections::HashMap;
+
 use markdown::mdast::{ListItem, Node};
 use serde::{Deserialize, Serialize};
 
 pub struct BlockBuilder {
-    id: usize,
     list_item: Option<ListItem>,
-    file_id: Option<usize>,
-    parent_block_id: Option<usize>,
+    file_id: Option<String>,
+    parent_block_id: Option<String>,
 }
 
 impl BlockBuilder {
     pub fn new() -> BlockBuilder {
         BlockBuilder {
-            id: uuid::Uuid::new_v4().as_u128() as usize,
             list_item: None,
             file_id: None,
             parent_block_id: None,
@@ -23,29 +23,14 @@ impl BlockBuilder {
         self
     }
 
-    pub fn with_file_id(mut self, file_id: usize) -> BlockBuilder {
+    pub fn with_file_id(mut self, file_id: String) -> BlockBuilder {
         self.file_id = Some(file_id);
         self
     }
 
-    pub fn with_parent_block_id(mut self, parent_block_id: usize) -> BlockBuilder {
+    pub fn with_parent_block_id(mut self, parent_block_id: String) -> BlockBuilder {
         self.parent_block_id = Some(parent_block_id);
         self
-    }
-
-    fn get_properties(&self) -> Vec<String> {
-        let _list_item = self.list_item.as_ref().expect("No list item");
-        todo!("Get the properties from the list item")
-    }
-
-    fn get_wikilinks(&self) -> Vec<String> {
-        let _list_item = self.list_item.as_ref().expect("No list item");
-        todo!("Get the wikilinks from the list item")
-    }
-
-    fn get_tags(&self) -> Vec<String> {
-        let _list_item = self.list_item.as_ref().expect("No list item");
-        todo!("Get the tags from the list item")
     }
 
     fn get_content(&self) -> String {
@@ -53,15 +38,47 @@ impl BlockBuilder {
         todo!("Get the content from the list item")
     }
 
+    fn get_id(_content: &str) -> String {
+        todo!("Get the id from the content");
+    }
+
+    fn get_properties(_content: &str) -> HashMap<String, String> {
+        todo!("Get the properties from the content")
+    }
+
+    fn get_wikilinks(_content: &str) -> Vec<String> {
+        todo!("Get the wikilinks from the content")
+    }
+
+    fn get_tags(_content: &str) -> Vec<String> {
+        todo!("Get the tags from the content")
+    }
+
     pub fn build(mut self) -> Vec<Block> {
         let list_item = self.list_item.take().expect("No list item");
-        let properties = self.get_properties();
-        let wikilinks = self.get_wikilinks();
-        let tags = self.get_tags();
         let content = self.get_content();
+        let id = Self::get_id(&content);
+        let properties = Self::get_properties(&content);
+        let wikilinks = Self::get_wikilinks(&content);
+        let tags = Self::get_tags(&content);
         let file_id = self.file_id.expect("No file id");
+        let mut blocks = vec![];
+        for child in list_item.children.iter() {
+            if let Node::List(list) = child {
+                for child in list.children.iter() {
+                    if let Node::ListItem(list_item) = child {
+                        let block = BlockBuilder::new()
+                            .with_list_item(list_item.clone())
+                            .with_file_id(file_id.clone())
+                            .with_parent_block_id(id.clone())
+                            .build();
+                        blocks.extend(block);
+                    }
+                }
+            }
+        }
         let root = Block {
-            id: self.id,
+            id,
             content,
             file_id,
             properties,
@@ -69,21 +86,7 @@ impl BlockBuilder {
             tags,
             parent_block_id: self.parent_block_id,
         };
-        let mut blocks = vec![root];
-        for child in list_item.children.iter() {
-            if let Node::List(list) = child {
-                for child in list.children.iter() {
-                    if let Node::ListItem(list_item) = child {
-                        let block = BlockBuilder::new()
-                            .with_list_item(list_item.clone())
-                            .with_file_id(file_id)
-                            .with_parent_block_id(self.id)
-                            .build();
-                        blocks.extend(block);
-                    }
-                }
-            }
-        }
+        blocks.push(root);
         blocks
     }
 }
@@ -92,15 +95,15 @@ impl BlockBuilder {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Block {
     /// The index of the block in the list
-    pub id: usize,
+    pub id: String,
     /// The text content of the block divided into types
     pub content: String,
     /// The file this block belongs to
-    pub file_id: usize,
+    pub file_id: String,
     /// Parent block id
-    pub parent_block_id: Option<usize>,
+    pub parent_block_id: Option<String>,
     /// The block properties
-    pub properties: Vec<String>,
+    pub properties: HashMap<String, String>,
     /// The block tags
     pub tags: Vec<String>,
     /// The wikilinks in the block
@@ -135,3 +138,46 @@ pub struct Block {
 //         }
 //     }
 // }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    mod builder {
+        use super::*;
+
+        #[test]
+        fn test_get_id() {
+            todo!("Test get_id")
+        }
+
+        #[test]
+        fn test_get_properties() {
+            todo!("Test get_properties")
+        }
+
+        #[test]
+        fn test_get_wikilinks() {
+            todo!("Test get_wikilinks")
+        }
+
+        #[test]
+        fn test_get_tags() {
+            todo!("Test get_tags")
+        }
+
+        #[test]
+        fn test_get_content() {
+            todo!("Test get_content")
+        }
+    }
+
+    mod block {
+        use super::*;
+
+        #[test]
+        fn test_build() {
+            todo!("Test build")
+        }
+    }
+}

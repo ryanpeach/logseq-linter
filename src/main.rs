@@ -1,4 +1,7 @@
 //! The entry point of the program.
+// #![warn(missing_docs)]
+// #![warn(clippy::missing_docs_in_private_items)]
+
 mod indexer;
 mod meilisearch;
 mod parsing;
