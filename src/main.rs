@@ -28,6 +28,7 @@ async fn main() {
     let args = Args::parse();
 
     Indexer::new()
+        .await
         .index_files(args.path.to_str().unwrap())
         .await
         .unwrap();

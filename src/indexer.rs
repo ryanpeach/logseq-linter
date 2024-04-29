@@ -61,9 +61,9 @@ pub struct Indexer {
 }
 
 impl Indexer {
-    pub fn new() -> Indexer {
+    pub async fn new() -> Indexer {
         Indexer {
-            db: Meilisearch::new(),
+            db: Meilisearch::new().await,
         }
     }
 
