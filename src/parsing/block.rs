@@ -77,11 +77,11 @@ impl BlockBuilder {
         properties
     }
 
-    fn get_wikilinks(_content: &str) -> Vec<String> {
+    fn get_wikilinks(content: &str) -> Vec<String> {
         // [[something]] but not #[[something]]
         let re = Regex::new(r"\s\[\[([\w\s]+)\]\]").unwrap();
         let mut wikilinks = vec![];
-        for captures in re.captures_iter(_content) {
+        for captures in re.captures_iter(content) {
             assert_eq!(
                 captures.len(),
                 2,
@@ -93,11 +93,11 @@ impl BlockBuilder {
         wikilinks
     }
 
-    fn get_tags(_content: &str) -> Vec<String> {
+    fn get_tags(content: &str) -> Vec<String> {
         // #something or #[[something]]
         let re = Regex::new(r"(?i)#\[\[([\w\s]+)\]\]|#(\w+)").unwrap();
         let mut tags = vec![];
-        for captures in re.captures_iter(_content) {
+        for captures in re.captures_iter(content) {
             assert_eq!(
                 captures.len(),
                 3,

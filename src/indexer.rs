@@ -82,7 +82,7 @@ impl Indexer {
                     let file = FileBuilder::new()
                         .with_path(path.clone())
                         .with_ast(ast.clone())
-                        .build();
+                        .build()?;
                     self.index_blocks(ast, file.id.clone(), path.clone())
                         .await
                         .map_err(|e| e.to_string())?;
