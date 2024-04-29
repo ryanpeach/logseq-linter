@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use markdown::mdast::{ListItem, Node};
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 pub struct BlockBuilder {
@@ -39,11 +40,31 @@ impl BlockBuilder {
     }
 
     fn get_id(_content: &str) -> String {
-        todo!("Get the id from the content");
+        let re = Regex::new("id:: ([a-f0-9-]+)");
+        let captures = re.unwrap().captures(_content).unwrap();
+        match captures.get(1) {
+            Some(id) => id.as_str().to_string(),
+            None => uuid::Uuid::new_v4().to_string(),
+        }
     }
 
     fn get_properties(_content: &str) -> HashMap<String, String> {
-        todo!("Get the properties from the content")
+        let re = Regex::new(r"([a-z]+):: ([a-z]+)").unwrap();
+        let mut properties = HashMap::new();
+        for captures in re.captures_iter(_content) {
+            assert_eq!(
+                captures.len(),
+                3,
+                "There should be the full capture, a key, and a value: {:?}",
+                captures
+            );
+            let k = captures[1].to_string();
+            let v = captures[2].to_string();
+            if k != "id" {
+                properties.insert(k, v);
+            }
+        }
+        properties
     }
 
     fn get_wikilinks(_content: &str) -> Vec<String> {
@@ -146,14 +167,83 @@ mod tests {
     mod builder {
         use super::*;
 
-        #[test]
-        fn test_get_id() {
-            todo!("Test get_id")
-        }
+        mod properties {
+            use super::*;
 
-        #[test]
-        fn test_get_properties() {
-            todo!("Test get_properties")
+            fn get_list_blocks_as_str() -> Vec<String> {
+                // First lets get the list items from the markdown file
+                let content =
+                    std::fs::read_to_string("graph/pages/tests___parsing___blocks___property.md")
+                        .unwrap();
+                let ast = markdown::to_mdast(&content, &markdown::ParseOptions::default());
+                let list_items: Vec<String> = ast
+                    .unwrap()
+                    .children()
+                    .unwrap()
+                    .iter()
+                    .filter_map(|child| match child {
+                        Node::List(list) => Some(list),
+                        _ => None,
+                    })
+                    .flat_map(|list| list.children.iter())
+                    .filter_map(|child| match child {
+                        Node::ListItem(list_item) => Some(list_item),
+                        _ => None,
+                    })
+                    .flat_map(|list_item| list_item.children.iter())
+                    .filter_map(|child| match child {
+                        Node::Paragraph(paragraph) => Some(paragraph),
+                        _ => None,
+                    })
+                    .flat_map(|paragraph| paragraph.children.iter())
+                    .filter_map(|child| match child {
+                        Node::Text(text) => Some(text.value.clone()),
+                        _ => None,
+                    })
+                    .collect();
+                assert_eq!(
+                    list_items.len(),
+                    4,
+                    "There should be 4 list items in this file"
+                );
+                list_items
+            }
+
+            #[test]
+            fn test_get_id() {
+                let list_items = get_list_blocks_as_str();
+
+                // The first and third items have an id
+                let first = BlockBuilder::get_id(&list_items[0]);
+                assert_eq!(first, "662ef9e2-4b89-4f7d-9a54-afd395b03cb0");
+                let third = BlockBuilder::get_id(&list_items[2]);
+                assert_eq!(third, "662effa7-a861-42df-a5bf-64c783eb8b64");
+            }
+
+            #[test]
+            fn test_get_properties() {
+                let list_items = get_list_blocks_as_str();
+
+                // The first and second items have properties foo:: bar
+                let first = BlockBuilder::get_properties(&list_items[0]);
+                assert_eq!(first.get("foo"), Some(&"bar".to_string()));
+                let second = BlockBuilder::get_properties(&list_items[1]);
+                assert_eq!(second.get("foo"), Some(&"bar".to_string()));
+                let third = BlockBuilder::get_properties(&list_items[2]);
+                assert_eq!(third.len(), 0);
+                let fourth = BlockBuilder::get_properties(&list_items[3]);
+                assert_eq!(fourth.len(), 0);
+            }
+
+            #[test]
+            fn test_get_properties_does_not_return_ids() {
+                let list_items = get_list_blocks_as_str();
+
+                for li in list_items {
+                    let properties = BlockBuilder::get_properties(&li);
+                    assert_eq!(properties.get("id"), None);
+                }
+            }
         }
 
         #[test]
