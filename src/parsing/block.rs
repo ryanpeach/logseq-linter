@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, path::Path};
 
 use markdown::mdast::{ListItem, Node};
 use regex::Regex;
@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 pub struct BlockBuilder {
     list_item: Option<ListItem>,
     file_id: Option<String>,
+    file_path: Option<Box<Path>>,
     parent_block_id: Option<String>,
 }
 
@@ -15,6 +16,7 @@ impl BlockBuilder {
         BlockBuilder {
             list_item: None,
             file_id: None,
+            file_path: None,
             parent_block_id: None,
         }
     }
@@ -29,14 +31,22 @@ impl BlockBuilder {
         self
     }
 
+    pub fn with_file_path(mut self, file_path: Box<Path>) -> BlockBuilder {
+        self.file_path = Some(file_path);
+        self
+    }
+
     pub fn with_parent_block_id(mut self, parent_block_id: String) -> BlockBuilder {
         self.parent_block_id = Some(parent_block_id);
         self
     }
 
-    fn get_content(&self) -> String {
-        let _list_item = self.list_item.as_ref().expect("No list item");
-        todo!("Get the content from the list item")
+    fn get_content(&self) -> Result<String, String> {
+        let list_item = self.list_item.as_ref().expect("No list item");
+        let file_path = self.file_path.clone().expect("No file path");
+        let buf = std::fs::read_to_string(file_path).map_err(|e| e.to_string())?;
+        let position = list_item.position.clone().unwrap();
+        Ok(buf[position.start.offset..position.end.offset].to_string())
     }
 
     fn get_id(_content: &str) -> String {
@@ -75,9 +85,9 @@ impl BlockBuilder {
         todo!("Get the tags from the content")
     }
 
-    pub fn build(mut self) -> Vec<Block> {
-        let list_item = self.list_item.take().expect("No list item");
-        let content = self.get_content();
+    pub fn build(self) -> Result<Vec<Block>, String> {
+        let content = self.get_content()?;
+        let list_item = self.list_item.expect("No list item");
         let id = Self::get_id(&content);
         let properties = Self::get_properties(&content);
         let wikilinks = Self::get_wikilinks(&content);
@@ -92,7 +102,7 @@ impl BlockBuilder {
                             .with_list_item(list_item.clone())
                             .with_file_id(file_id.clone())
                             .with_parent_block_id(id.clone())
-                            .build();
+                            .build()?;
                         blocks.extend(block);
                     }
                 }
@@ -108,7 +118,7 @@ impl BlockBuilder {
             parent_block_id: self.parent_block_id,
         };
         blocks.push(root);
-        blocks
+        Ok(blocks)
     }
 }
 
@@ -210,6 +220,41 @@ mod tests {
             }
 
             #[test]
+            fn test_get_content() {
+                let content =
+                    std::fs::read_to_string("graph/pages/tests___parsing___blocks___property.md")
+                        .unwrap();
+                let ast = markdown::to_mdast(&content, &markdown::ParseOptions::default()).unwrap();
+                let list_items: Vec<&ListItem> = ast
+                    .children()
+                    .unwrap()
+                    .iter()
+                    .filter_map(|child| match child {
+                        Node::List(list) => Some(list),
+                        _ => None,
+                    })
+                    .flat_map(|list| list.children.iter())
+                    .filter_map(|child| match child {
+                        Node::ListItem(list_item) => Some(list_item),
+                        _ => None,
+                    })
+                    .collect();
+                let first = BlockBuilder::new()
+                    .with_list_item(list_items[0].clone())
+                    .with_file_path(
+                        std::path::PathBuf::from(
+                            "graph/pages/tests___parsing___blocks___property.md",
+                        )
+                        .into(),
+                    )
+                    .get_content();
+                assert_eq!(
+                    first.unwrap(),
+                    "- This tests a block property\n  foo:: bar\n  id:: 662ef9e2-4b89-4f7d-9a54-afd395b03cb0"
+                );
+            }
+
+            #[test]
             fn test_get_id() {
                 let list_items = get_list_blocks_as_str();
 
@@ -254,11 +299,6 @@ mod tests {
         #[test]
         fn test_get_tags() {
             todo!("Test get_tags")
-        }
-
-        #[test]
-        fn test_get_content() {
-            todo!("Test get_content")
         }
     }
 
