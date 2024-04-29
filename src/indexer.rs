@@ -83,7 +83,7 @@ impl Indexer {
                         .with_path(path.clone())
                         .with_ast(ast.clone())
                         .build();
-                    self.index_blocks(ast, file.id)
+                    self.index_blocks(ast, file.id.clone())
                         .await
                         .map_err(|e| e.to_string())?;
                     file
@@ -98,13 +98,13 @@ impl Indexer {
         Ok(())
     }
 
-    async fn index_blocks(&self, ast: &mdast::Node, file_id: usize) -> Result<(), String> {
+    async fn index_blocks(&self, ast: &mdast::Node, file_id: String) -> Result<(), String> {
         let blocks = self.db.client.index("blocks");
         for child in ast.children().unwrap_or(&vec![]).iter() {
             if let mdast::Node::ListItem(list_item) = child {
                 let new_blocks = BlockBuilder::new()
                     .with_list_item(list_item.clone())
-                    .with_file_id(file_id)
+                    .with_file_id(file_id.clone())
                     .build();
                 blocks
                     .add_documents(&new_blocks, Some("id"))
