@@ -38,12 +38,7 @@ impl FileBuilder {
             .children()
             .unwrap()
             .iter()
-            .flat_map(|node| node.children().unwrap())
-            .filter_map(|child| match child {
-                Node::Paragraph(paragraph) => Some(paragraph),
-                _ => None,
-            })
-            .flat_map(|paragraph| paragraph.children.iter())
+            .flat_map(|paragraph| paragraph.children().unwrap())
             .filter_map(|child| match child {
                 Node::Text(text) => Some(text.value.clone()),
                 _ => None,
@@ -65,7 +60,7 @@ impl FileBuilder {
                     "title" => {}
                     "tags" => {}
                     _ => {
-                        properties.insert(key.clone(), value.clone());
+                        properties.insert(key.trim().to_string(), value.trim().to_string());
                     }
                 }
             }
@@ -93,6 +88,16 @@ impl FileBuilder {
         // #something or #[[something]]
         let re = Regex::new(r"(?i)#\[\[([\w\s]+)\]\]|#(\w+)").unwrap();
         let mut tags = vec![];
+        for line in top_text.lines() {
+            let split = line.split("::").map(|s| s.to_string()); // Convert iterator over &str to iterator over String
+            if let [key, value] = split.collect::<Vec<String>>().as_slice() {
+                if key.as_str() == "tags" {
+                    let tags_split: Vec<&str> = value.split(',').collect();
+                    let trim_tags_split: Vec<&str> = tags_split.iter().map(|x| x.trim()).collect();
+                    tags.extend(trim_tags_split.iter().map(|x| x.to_string()));
+                }
+            }
+        }
         for captures in re.captures_iter(content) {
             assert_eq!(
                 captures.len(),
@@ -106,16 +111,6 @@ impl FileBuilder {
                 tags.push(tag.as_str().to_string());
             } else {
                 panic!("No tag found");
-            }
-        }
-        for line in top_text.lines() {
-            let split = line.split("::").map(|s| s.to_string()); // Convert iterator over &str to iterator over String
-            if let [key, value] = split.collect::<Vec<String>>().as_slice() {
-                if key.as_str() == "tags" {
-                    let tags_split: Vec<&str> = value.split(',').collect();
-                    let trim_tags_split: Vec<&str> = tags_split.iter().map(|x| x.trim()).collect();
-                    tags.extend(trim_tags_split.iter().map(|x| x.to_string()));
-                }
             }
         }
         tags
@@ -179,60 +174,6 @@ pub struct File {
     pub tags: Vec<String>,
 }
 
-// impl File {
-//     /// Get the tags from the AST
-//     /// They are at the top of the file
-//     /// Root { children: [Paragraph { children: [Text { value:
-//     /// Before List
-//     fn get_attributes(ast: &Node) -> HashMap<String, Vec<TypeEnum>> {
-//         let mut attributes = HashMap::new();
-//         let children = ast.children().expect("No children");
-//         for child in children {
-//             if let Node::Paragraph(paragraph) = child {
-//                 for child in paragraph.children.iter() {
-//                     if let Node::Text(text) = child {
-//                         for line in text.value.lines() {
-//                             let split = line.split("::");
-//                             if let [key, values] = split.collect::<Vec<&str>>().as_slice() {
-//                                 let key = key.trim();
-//                                 let values = values.trim();
-//                                 let values_split: Vec<&str> = values.split(',').collect();
-//                                 let trim_values_split: Vec<&str> =
-//                                     values_split.iter().map(|x| x.trim()).collect();
-//                                 let mut type_enums = Vec::new();
-//                                 for value in trim_values_split {
-//                                     type_enums.push(TypeEnum::from_csv_item(value.to_string()));
-//                                 }
-//                                 attributes.insert(key.to_string(), type_enums);
-//                             }
-//                         }
-//                     }
-//                 }
-//             }
-//         }
-//         attributes
-//     }
-
-//     /// Get the blocks from the AST
-//     /// They are the list elements
-//     /// Root { List { children: [ListItem { children: [Paragraph { children: [Text { value:
-//     fn get_blocks(ast: &Node) -> Vec<Block> {
-//         let mut blocks = Vec::new();
-//         let children = ast.children().expect("No children");
-//         for child in children.iter() {
-//             if let Node::List(list) = child {
-//                 for child in list.children.iter() {
-//                     if let Node::ListItem(list_item) = child {
-//                         let block = Block::new(blocks.len(), list_item);
-//                         blocks.push(block);
-//                     }
-//                 }
-//             }
-//         }
-//         blocks
-//     }
-// }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -240,33 +181,58 @@ mod tests {
     mod builder {
         use super::*;
 
+        fn get_content() -> File {
+            let content =
+                std::fs::read_to_string("graph/pages/tests___parsing___files___basic.md").unwrap();
+            let ast = markdown::to_mdast(&content, &markdown::ParseOptions::default()).unwrap();
+
+            let file = FileBuilder::new()
+                .with_path(
+                    std::path::PathBuf::from("graph/pages/tests___parsing___files___basic.md")
+                        .into(),
+                )
+                .with_ast(ast)
+                .build()
+                .unwrap();
+            file
+        }
+
+        #[test]
+        fn test_get_top_text() {
+            let content =
+                std::fs::read_to_string("graph/pages/tests___parsing___files___basic.md").unwrap();
+            let ast = markdown::to_mdast(&content, &markdown::ParseOptions::default()).unwrap();
+            let top_text = FileBuilder::get_top_text(&ast);
+            assert_eq!(top_text, "tags:: foo, bar\nfoo:: bar");
+        }
+
         #[test]
         fn test_get_properties() {
-            todo!("Test get_properties")
+            let file = get_content();
+            let properties = file.properties;
+            assert_eq!(properties.get("foo"), Some(&"bar".to_string()));
+            assert_eq!(properties.get("tags"), None);
         }
 
         #[test]
         fn test_get_wikilinks() {
-            todo!("Test get_wikilinks")
+            let file = get_content();
+            let wikilinks = file.wikilinks;
+            assert_eq!(wikilinks, vec!["wikilink"]);
         }
 
         #[test]
         fn test_get_tags() {
-            todo!("Test get_tags")
+            let file = get_content();
+            let tags = file.tags;
+            assert_eq!(tags, vec!["foo", "bar", "tag", "multi word tag"]);
         }
 
         #[test]
         fn test_get_title() {
-            todo!("Test get_title")
-        }
-    }
-
-    mod file {
-        use super::*;
-
-        #[test]
-        fn test_build() {
-            todo!("Test build")
+            let file = get_content();
+            let title = file.title;
+            assert_eq!(title, "tests/parsing/files/basic");
         }
     }
 }
