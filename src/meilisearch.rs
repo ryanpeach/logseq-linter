@@ -7,11 +7,13 @@ pub struct Meilisearch {
 }
 
 impl Meilisearch {
-    pub fn new() -> Meilisearch {
+    pub async fn new() -> Meilisearch {
         let url =
             env::var("MEILISEARCH_URL").unwrap_or_else(|_| "http://localhost:7700".to_string());
         let api_key = env::var("MEILISEARCH_API_KEY").unwrap_or_else(|_| "masterKey".to_string());
         let client = Client::new(url, Some(api_key));
+        client.create_index("files", Some("id")).await.unwrap();
+        client.create_index("blocks", Some("id")).await.unwrap();
         Meilisearch { client }
     }
 }
@@ -36,9 +38,10 @@ mod tests {
         dotenv().ok();
 
         // Create a client (without sending any request so that can't fail)
-        let client = Meilisearch::new().client;
+        let client = Meilisearch::new().await.client;
 
         // An index is where the documents are stored.
+        client.create_index("movies", Some("id")).await.unwrap();
         let movies = client.index("movies");
 
         // Add some movies in the index. If the index 'movies' does not exist, Meilisearch creates it when you first add the documents.
@@ -84,8 +87,7 @@ mod tests {
         // Meilisearch is typo-tolerant:
         println!(
             "{:?}",
-            client
-                .index("movies")
+            movies
                 .search()
                 .with_query("caorl")
                 .execute::<Movie>()
