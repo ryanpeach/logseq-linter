@@ -1,11 +1,14 @@
-use std::{collections::HashMap, path::Path};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 
 use markdown::mdast::Node;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 pub struct FileBuilder {
-    path: Option<Box<Path>>,
+    path: Option<PathBuf>,
     ast: Option<Node>,
 }
 
@@ -17,7 +20,7 @@ impl FileBuilder {
         }
     }
 
-    pub fn with_path(mut self, path: Box<Path>) -> FileBuilder {
+    pub fn with_path(mut self, path: PathBuf) -> FileBuilder {
         self.path = Some(path);
         self
     }
