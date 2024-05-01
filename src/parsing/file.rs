@@ -185,9 +185,9 @@ mod tests {
             let ast = markdown::to_mdast(&content, &markdown::ParseOptions::default()).unwrap();
 
             FileBuilder::new()
-                .with_path(
-                    std::path::PathBuf::from("graph/pages/tests___parsing___files___basic.md"),
-                )
+                .with_path(std::path::PathBuf::from(
+                    "graph/pages/tests___parsing___files___basic.md",
+                ))
                 .with_ast(ast)
                 .build(&content)
                 .unwrap()

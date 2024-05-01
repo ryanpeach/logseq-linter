@@ -81,7 +81,6 @@ impl Indexer {
                     self.index_blocks(&ast, &content, fb.get_id(), path.clone())
                         .await
                         .map_err(|e| e.to_string())?;
-                    
 
                     fb.with_path(path).with_ast(ast).build(&content)?
                 }
