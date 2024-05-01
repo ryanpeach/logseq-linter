@@ -72,18 +72,17 @@ impl Indexer {
         for file in walker
             .into_iter()
             .collect::<Vec<Result<(PathBuf, mdast::Node, String), String>>>()
-            .iter()
+            .into_iter()
             .progress()
         {
             let doc = match file {
                 Ok((path, ast, content)) => {
-                    let file = FileBuilder::new()
-                        .with_path(path.clone())
-                        .with_ast(ast.clone())
-                        .build(content)?;
-                    self.index_blocks(ast, content, file.id.clone(), path.clone())
+                    let fb = FileBuilder::new();
+                    self.index_blocks(&ast, &content, fb.get_id(), path.clone())
                         .await
                         .map_err(|e| e.to_string())?;
+                    let file = fb.with_path(path).with_ast(ast).build(&content)?;
+
                     file
                 }
                 Err(msg) => return Err(msg.to_string()),

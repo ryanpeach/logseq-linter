@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 pub struct FileBuilder {
     path: Option<PathBuf>,
     ast: Option<Node>,
+    id: String,
 }
 
 impl FileBuilder {
@@ -17,6 +18,7 @@ impl FileBuilder {
         FileBuilder {
             path: None,
             ast: None,
+            id: uuid::Uuid::new_v4().to_string(),
         }
     }
 
@@ -44,8 +46,8 @@ impl FileBuilder {
         top_text
     }
 
-    fn get_id() -> String {
-        uuid::Uuid::new_v4().to_string()
+    pub fn get_id(&self) -> String {
+        self.id.clone()
     }
 
     fn get_properties(top_text: &str) -> HashMap<String, String> {
@@ -126,12 +128,12 @@ impl FileBuilder {
         let ast = self.ast.take().ok_or("No AST".to_string())?;
         let path = self
             .path
-            .clone()
+            .as_ref()
             .ok_or("No path".to_string())?
             .to_string_lossy()
             .to_string();
         let top_text = Self::get_top_text(&ast);
-        let id = Self::get_id();
+        let id = self.id;
         let properties = Self::get_properties(&top_text);
         let wikilinks = Self::get_wikilinks(content);
         let tags = Self::get_tags(&top_text, content);
