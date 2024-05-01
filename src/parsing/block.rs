@@ -240,11 +240,9 @@ mod tests {
                     .collect();
                 let first = BlockBuilder::new()
                     .with_list_item(list_items[0].clone())
-                    .with_file_path(
-                        std::path::PathBuf::from(
-                            "graph/pages/tests___parsing___blocks___property.md",
-                        ),
-                    )
+                    .with_file_path(std::path::PathBuf::from(
+                        "graph/pages/tests___parsing___blocks___property.md",
+                    ))
                     .get_slice(&content);
                 assert_eq!(
                     first.unwrap(),
@@ -314,11 +312,9 @@ mod tests {
                     .collect();
                 let first = BlockBuilder::new()
                     .with_list_item(list_items[0].clone())
-                    .with_file_path(
-                        std::path::PathBuf::from(
-                            "graph/pages/tests___parsing___blocks___tags_wikilinks.md",
-                        ),
-                    )
+                    .with_file_path(std::path::PathBuf::from(
+                        "graph/pages/tests___parsing___blocks___tags_wikilinks.md",
+                    ))
                     .get_slice(&content);
                 first.unwrap()
             }
