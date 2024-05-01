@@ -186,8 +186,7 @@ mod tests {
 
             FileBuilder::new()
                 .with_path(
-                    std::path::PathBuf::from("graph/pages/tests___parsing___files___basic.md")
-                        .into(),
+                    std::path::PathBuf::from("graph/pages/tests___parsing___files___basic.md"),
                 )
                 .with_ast(ast)
                 .build(&content)

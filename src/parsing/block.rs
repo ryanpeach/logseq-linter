@@ -243,8 +243,7 @@ mod tests {
                     .with_file_path(
                         std::path::PathBuf::from(
                             "graph/pages/tests___parsing___blocks___property.md",
-                        )
-                        .into(),
+                        ),
                     )
                     .get_slice(&content);
                 assert_eq!(
@@ -318,8 +317,7 @@ mod tests {
                     .with_file_path(
                         std::path::PathBuf::from(
                             "graph/pages/tests___parsing___blocks___tags_wikilinks.md",
-                        )
-                        .into(),
+                        ),
                     )
                     .get_slice(&content);
                 first.unwrap()

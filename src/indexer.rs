@@ -81,9 +81,9 @@ impl Indexer {
                     self.index_blocks(&ast, &content, fb.get_id(), path.clone())
                         .await
                         .map_err(|e| e.to_string())?;
-                    let file = fb.with_path(path).with_ast(ast).build(&content)?;
+                    
 
-                    file
+                    fb.with_path(path).with_ast(ast).build(&content)?
                 }
                 Err(msg) => return Err(msg.to_string()),
             };
