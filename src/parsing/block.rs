@@ -5,7 +5,6 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 pub struct BlockBuilder {
-    list_item: Option<ListItem>,
     file_id: Option<String>,
     file_path: Option<PathBuf>,
     parent_block_id: Option<String>,
@@ -14,16 +13,10 @@ pub struct BlockBuilder {
 impl BlockBuilder {
     pub fn new() -> BlockBuilder {
         BlockBuilder {
-            list_item: None,
             file_id: None,
             file_path: None,
             parent_block_id: None,
         }
-    }
-
-    pub fn with_list_item(mut self, list_item: ListItem) -> BlockBuilder {
-        self.list_item = Some(list_item);
-        self
     }
 
     pub fn with_file_id(mut self, file_id: String) -> BlockBuilder {
@@ -41,25 +34,24 @@ impl BlockBuilder {
         self
     }
 
-    fn get_slice(&self, content: &str) -> Result<String, String> {
-        let list_item = self.list_item.as_ref().expect("No list item");
+    fn get_slice(&self, content: &str, list_item: &ListItem) -> Result<String, String> {
         let position = list_item.position.as_ref().unwrap();
         Ok(content[position.start.offset..position.end.offset].to_string())
     }
 
-    fn get_id(_content: &str) -> String {
+    fn get_id(content: &str) -> String {
         let re = Regex::new("id:: ([a-f0-9-]+)");
-        let captures = re.unwrap().captures(_content).unwrap();
+        let captures = re.unwrap().captures(content).unwrap();
         match captures.get(1) {
             Some(id) => id.as_str().to_string(),
             None => uuid::Uuid::new_v4().to_string(),
         }
     }
 
-    fn get_properties(_content: &str) -> HashMap<String, String> {
+    fn get_properties(content: &str) -> HashMap<String, String> {
         let re = Regex::new(r"([a-z]+):: ([a-z]+)").unwrap();
         let mut properties = HashMap::new();
-        for captures in re.captures_iter(_content) {
+        for captures in re.captures_iter(content) {
             assert_eq!(
                 captures.len(),
                 3,
@@ -113,9 +105,8 @@ impl BlockBuilder {
         tags
     }
 
-    pub fn build(self, content: &str) -> Result<Vec<Block>, String> {
-        let slice = self.get_slice(content)?;
-        let list_item = self.list_item.expect("No list item");
+    pub fn build(self, content: &str, list_item: &ListItem) -> Result<Vec<Block>, String> {
+        let slice = self.get_slice(content, list_item)?;
         let id = Self::get_id(&slice);
         let properties = Self::get_properties(&slice);
         let wikilinks = Self::get_wikilinks(&slice);
@@ -127,10 +118,9 @@ impl BlockBuilder {
                 for child in list.children.iter() {
                     if let Node::ListItem(list_item) = child {
                         let block = BlockBuilder::new()
-                            .with_list_item(list_item.clone())
                             .with_file_id(file_id.clone())
                             .with_parent_block_id(id.clone())
-                            .build(content)?;
+                            .build(content, list_item)?;
                         blocks.extend(block);
                     }
                 }
@@ -239,11 +229,10 @@ mod tests {
                     })
                     .collect();
                 let first = BlockBuilder::new()
-                    .with_list_item(list_items[0].clone())
                     .with_file_path(std::path::PathBuf::from(
                         "graph/pages/tests___parsing___blocks___property.md",
                     ))
-                    .get_slice(&content);
+                    .get_slice(&content, list_items[0]);
                 assert_eq!(
                     first.unwrap(),
                     "- This tests a block property\n  foo:: bar\n  id:: 662ef9e2-4b89-4f7d-9a54-afd395b03cb0"
@@ -311,11 +300,10 @@ mod tests {
                     })
                     .collect();
                 let first = BlockBuilder::new()
-                    .with_list_item(list_items[0].clone())
                     .with_file_path(std::path::PathBuf::from(
                         "graph/pages/tests___parsing___blocks___tags_wikilinks.md",
                     ))
-                    .get_slice(&content);
+                    .get_slice(&content, list_items[0]);
                 first.unwrap()
             }
 

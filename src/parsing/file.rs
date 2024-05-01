@@ -9,7 +9,6 @@ use serde::{Deserialize, Serialize};
 
 pub struct FileBuilder {
     path: Option<PathBuf>,
-    ast: Option<Node>,
     id: String,
 }
 
@@ -17,18 +16,12 @@ impl FileBuilder {
     pub fn new() -> FileBuilder {
         FileBuilder {
             path: None,
-            ast: None,
             id: uuid::Uuid::new_v4().to_string(),
         }
     }
 
     pub fn with_path(mut self, path: PathBuf) -> FileBuilder {
         self.path = Some(path);
-        self
-    }
-
-    pub fn with_ast(mut self, ast: Node) -> FileBuilder {
-        self.ast = Some(ast);
         self
     }
 
@@ -44,10 +37,6 @@ impl FileBuilder {
             })
             .collect();
         top_text
-    }
-
-    pub fn get_id(&self) -> String {
-        self.id.clone()
     }
 
     fn get_properties(top_text: &str) -> HashMap<String, String> {
@@ -124,15 +113,14 @@ impl FileBuilder {
         file_name.replace(".md", "").replace("___", "/")
     }
 
-    pub fn build(mut self, content: &str) -> Result<File, String> {
-        let ast = self.ast.take().ok_or("No AST".to_string())?;
+    pub fn build(mut self, content: &str, ast: &Node) -> Result<File, String> {
         let path = self
             .path
             .as_ref()
             .ok_or("No path".to_string())?
             .to_string_lossy()
             .to_string();
-        let top_text = Self::get_top_text(&ast);
+        let top_text = Self::get_top_text(ast);
         let id = self.id;
         let properties = Self::get_properties(&top_text);
         let wikilinks = Self::get_wikilinks(content);
@@ -188,8 +176,7 @@ mod tests {
                 .with_path(std::path::PathBuf::from(
                     "graph/pages/tests___parsing___files___basic.md",
                 ))
-                .with_ast(ast)
-                .build(&content)
+                .build(&content, &ast)
                 .unwrap()
         }
 

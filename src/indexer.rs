@@ -77,12 +77,12 @@ impl Indexer {
         {
             let doc = match file {
                 Ok((path, ast, content)) => {
-                    let fb = FileBuilder::new();
-                    self.index_blocks(&ast, &content, fb.get_id(), path.clone())
+                    let file = FileBuilder::new()
+                        .with_path(path.clone())
+                        .build(&content, &ast)?;
+                    self.index_blocks(&ast, &content, file.id.clone(), path)
                         .await
                         .map_err(|e| e.to_string())?;
-
-                    fb.with_path(path).with_ast(ast).build(&content)?
                 }
                 Err(msg) => return Err(msg.to_string()),
             };
@@ -105,10 +105,9 @@ impl Indexer {
         for child in ast.children().unwrap_or(&vec![]).iter() {
             if let mdast::Node::ListItem(list_item) = child {
                 let new_blocks = BlockBuilder::new()
-                    .with_list_item(list_item.clone())
                     .with_file_id(file_id.clone())
                     .with_file_path(file_path.clone())
-                    .build(content)?;
+                    .build(content, list_item)?;
                 blocks
                     .add_documents(&new_blocks, Some("id"))
                     .await
