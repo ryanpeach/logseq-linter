@@ -83,6 +83,7 @@ impl Indexer {
                     self.index_blocks(&ast, &content, file.id.clone(), path)
                         .await
                         .map_err(|e| e.to_string())?;
+                    file
                 }
                 Err(msg) => return Err(msg.to_string()),
             };
