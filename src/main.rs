@@ -5,7 +5,7 @@
 mod indexer;
 mod meilisearch;
 mod parsing;
-use std::path::Path;
+use std::path::PathBuf;
 
 use clap::{command, Parser};
 use dotenv::dotenv;
@@ -16,7 +16,7 @@ use indexer::Indexer;
 #[command(version, about, long_about = None)]
 struct Args {
     /// Input folder path
-    path: Box<Path>,
+    path: PathBuf,
 }
 
 #[tokio::main(flavor = "current_thread")]

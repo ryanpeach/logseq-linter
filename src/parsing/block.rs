@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::Path};
+use std::{collections::HashMap, path::PathBuf};
 
 use markdown::mdast::{ListItem, Node};
 use regex::Regex;
@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 pub struct BlockBuilder {
     list_item: Option<ListItem>,
     file_id: Option<String>,
-    file_path: Option<Box<Path>>,
+    file_path: Option<PathBuf>,
     parent_block_id: Option<String>,
 }
 
@@ -31,7 +31,7 @@ impl BlockBuilder {
         self
     }
 
-    pub fn with_file_path(mut self, file_path: Box<Path>) -> BlockBuilder {
+    pub fn with_file_path(mut self, file_path: PathBuf) -> BlockBuilder {
         self.file_path = Some(file_path);
         self
     }

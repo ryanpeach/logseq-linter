@@ -3,7 +3,7 @@
 use glob::Pattern;
 use indicatif::ProgressIterator;
 use markdown::mdast;
-use std::path::Path;
+use std::path::PathBuf;
 use walkdir::WalkDir;
 
 use crate::meilisearch::Meilisearch;
@@ -29,22 +29,20 @@ impl MdWalker {
 }
 
 impl Iterator for MdWalker {
-    type Item = Result<(Box<Path>, mdast::Node), String>;
+    type Item = Result<(PathBuf, mdast::Node), String>;
 
     /// Get the next file matching the pattern. Returns the markdown AST.
     fn next(&mut self) -> Option<Self::Item> {
         for entry in self.walker.by_ref() {
             match entry {
-                Ok(e) if self.pattern.matches_path(Path::new(e.path())) => {
+                Ok(e) if self.pattern.matches_path(e.path()) => {
                     let content = match std::fs::read_to_string(e.path()) {
                         Ok(content) => content,
                         Err(msg) => return Some(Err(msg.to_string())),
                     };
                     let ast = markdown::to_mdast(&content, &markdown::ParseOptions::default());
                     match ast {
-                        Ok(ast) => {
-                            return Some(Ok((e.path().to_path_buf().into_boxed_path(), ast)))
-                        }
+                        Ok(ast) => return Some(Ok((e.path().to_path_buf(), ast))),
                         Err(msg) => return Some(Err(msg.to_string())),
                     }
                 }
@@ -73,7 +71,7 @@ impl Indexer {
         let walker = MdWalker::new(path);
         for file in walker
             .into_iter()
-            .collect::<Vec<Result<(Box<Path>, mdast::Node), String>>>()
+            .collect::<Vec<Result<(PathBuf, mdast::Node), String>>>()
             .iter()
             .progress()
         {
@@ -102,7 +100,7 @@ impl Indexer {
         &self,
         ast: &mdast::Node,
         file_id: String,
-        file_path: Box<Path>,
+        file_path: PathBuf,
     ) -> Result<(), String> {
         let blocks = self.db.client.index("blocks");
         for child in ast.children().unwrap_or(&vec![]).iter() {
