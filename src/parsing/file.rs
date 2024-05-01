@@ -144,7 +144,7 @@ impl FileBuilder {
 }
 
 /// This is a markdown file in logseq
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct File {
     /// The id of the file
     pub id: String,

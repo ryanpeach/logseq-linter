@@ -26,11 +26,8 @@ jobs:
     - name: Install cargo fmt, clippy
       run: rustup component add rustfmt clippy
 
-    - name: Check Code Formatting
-      run: cargo fmt -- --check
-
-    - name: Check Code Linting
-      run: cargo clippy --all-targets --all-features -- -D warnings
+    - name: Pre-commit
+      uses: pre-commit/action@v3.0.1
 
     - name: Build
       run: cargo build --verbose
@@ -40,7 +37,7 @@ jobs:
 
     - name: Run docker compose
       run: docker-compose up -d
-      
+
     - name: Run tests and collect coverage
       run: cargo tarpaulin --verbose --all-features --workspace --out xml
       continue-on-error: true

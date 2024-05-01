@@ -1,6 +1,9 @@
 use std::{collections::HashMap, path::PathBuf};
 
-use markdown::mdast::{ListItem, Node};
+use markdown::{
+    mdast::{ListItem, Node},
+    unist::Position,
+};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
@@ -36,15 +39,36 @@ impl BlockBuilder {
 
     fn get_slice(&self, content: &str, list_item: &ListItem) -> Result<String, String> {
         let position = list_item.position.as_ref().unwrap();
-        Ok(content[position.start.offset..position.end.offset].to_string())
+        let first_list_item_position: Option<Position> = list_item
+            .children
+            .iter()
+            .filter_map(|child| match child {
+                Node::List(list) => list.position.clone(),
+                _ => None,
+            })
+            .next();
+        if let Some(first_list_item_position) = first_list_item_position {
+            Ok(
+                content[position.start.offset..first_list_item_position.start.offset]
+                    .trim()
+                    .to_string(),
+            )
+        } else {
+            Ok(content[position.start.offset..position.end.offset]
+                .trim()
+                .to_string())
+        }
     }
 
     fn get_id(content: &str) -> String {
         let re = Regex::new("id:: ([a-f0-9-]+)");
-        let captures = re.unwrap().captures(content).unwrap();
-        match captures.get(1) {
-            Some(id) => id.as_str().to_string(),
-            None => uuid::Uuid::new_v4().to_string(),
+        if let Some(captures) = re.unwrap().captures(content) {
+            match captures.get(1) {
+                Some(id) => id.as_str().to_string(),
+                None => uuid::Uuid::new_v4().to_string(),
+            }
+        } else {
+            uuid::Uuid::new_v4().to_string()
         }
     }
 
@@ -141,7 +165,7 @@ impl BlockBuilder {
 }
 
 /// This is a logseq block, which is a markdown list element
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct Block {
     /// The index of the block in the list
     pub id: String,

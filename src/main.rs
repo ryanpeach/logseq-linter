@@ -29,7 +29,7 @@ async fn main() {
 
     Indexer::new()
         .await
-        .index_files(args.path.to_str().unwrap())
+        .index_files(args.path.to_str().unwrap(), true)
         .await
         .unwrap();
 }
