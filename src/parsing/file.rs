@@ -30,12 +30,6 @@ impl FileBuilder {
         self
     }
 
-    fn get_content(&self) -> Result<String, String> {
-        let file_path = self.path.clone().ok_or("No path".to_string())?;
-        let buf = std::fs::read_to_string(file_path).map_err(|e| e.to_string())?;
-        Ok(buf)
-    }
-
     fn get_top_text(ast: &Node) -> String {
         let top_text = ast
             .children()
@@ -128,7 +122,7 @@ impl FileBuilder {
         file_name.replace(".md", "").replace("___", "/")
     }
 
-    pub fn build(mut self) -> Result<File, String> {
+    pub fn build(mut self, content: &str) -> Result<File, String> {
         let ast = self.ast.take().ok_or("No AST".to_string())?;
         let path = self
             .path
@@ -137,11 +131,10 @@ impl FileBuilder {
             .to_string_lossy()
             .to_string();
         let top_text = Self::get_top_text(&ast);
-        let content = self.get_content()?;
         let id = Self::get_id();
         let properties = Self::get_properties(&top_text);
-        let wikilinks = Self::get_wikilinks(&content);
-        let tags = Self::get_tags(&top_text, &content);
+        let wikilinks = Self::get_wikilinks(content);
+        let tags = Self::get_tags(&top_text, content);
         let title = Self::get_title(
             self.path
                 .take()
@@ -195,7 +188,7 @@ mod tests {
                         .into(),
                 )
                 .with_ast(ast)
-                .build()
+                .build(&content)
                 .unwrap()
         }
 
