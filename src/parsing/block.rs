@@ -43,7 +43,7 @@ impl BlockBuilder {
 
     fn get_slice(&self, content: &str) -> Result<String, String> {
         let list_item = self.list_item.as_ref().expect("No list item");
-        let position = list_item.position.clone().unwrap();
+        let position = list_item.position.as_ref().unwrap();
         Ok(content[position.start.offset..position.end.offset].to_string())
     }
 
