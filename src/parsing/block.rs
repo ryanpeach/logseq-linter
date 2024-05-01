@@ -41,12 +41,10 @@ impl BlockBuilder {
         self
     }
 
-    fn get_content(&self) -> Result<String, String> {
+    fn get_slice(&self, content: &str) -> Result<String, String> {
         let list_item = self.list_item.as_ref().expect("No list item");
-        let file_path = self.file_path.clone().expect("No file path");
-        let buf = std::fs::read_to_string(file_path).map_err(|e| e.to_string())?;
         let position = list_item.position.clone().unwrap();
-        Ok(buf[position.start.offset..position.end.offset].to_string())
+        Ok(content[position.start.offset..position.end.offset].to_string())
     }
 
     fn get_id(_content: &str) -> String {
@@ -115,13 +113,13 @@ impl BlockBuilder {
         tags
     }
 
-    pub fn build(self) -> Result<Vec<Block>, String> {
-        let content = self.get_content()?;
+    pub fn build(self, content: &str) -> Result<Vec<Block>, String> {
+        let slice = self.get_slice(content)?;
         let list_item = self.list_item.expect("No list item");
-        let id = Self::get_id(&content);
-        let properties = Self::get_properties(&content);
-        let wikilinks = Self::get_wikilinks(&content);
-        let tags = Self::get_tags(&content);
+        let id = Self::get_id(&slice);
+        let properties = Self::get_properties(&slice);
+        let wikilinks = Self::get_wikilinks(&slice);
+        let tags = Self::get_tags(&slice);
         let file_id = self.file_id.expect("No file id");
         let mut blocks = vec![];
         for child in list_item.children.iter() {
@@ -132,7 +130,7 @@ impl BlockBuilder {
                             .with_list_item(list_item.clone())
                             .with_file_id(file_id.clone())
                             .with_parent_block_id(id.clone())
-                            .build()?;
+                            .build(content)?;
                         blocks.extend(block);
                     }
                 }
@@ -140,7 +138,7 @@ impl BlockBuilder {
         }
         let root = Block {
             id,
-            content,
+            content: slice,
             file_id,
             properties,
             wikilinks,
@@ -221,7 +219,7 @@ mod tests {
             }
 
             #[test]
-            fn test_get_content() {
+            fn test_get_slice() {
                 let content =
                     std::fs::read_to_string("graph/pages/tests___parsing___blocks___property.md")
                         .unwrap();
@@ -248,7 +246,7 @@ mod tests {
                         )
                         .into(),
                     )
-                    .get_content();
+                    .get_slice(&content);
                 assert_eq!(
                     first.unwrap(),
                     "- This tests a block property\n  foo:: bar\n  id:: 662ef9e2-4b89-4f7d-9a54-afd395b03cb0"
@@ -323,7 +321,7 @@ mod tests {
                         )
                         .into(),
                     )
-                    .get_content();
+                    .get_slice(&content);
                 first.unwrap()
             }
 

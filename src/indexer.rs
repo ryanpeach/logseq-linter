@@ -29,7 +29,7 @@ impl MdWalker {
 }
 
 impl Iterator for MdWalker {
-    type Item = Result<(PathBuf, mdast::Node), String>;
+    type Item = Result<(PathBuf, mdast::Node, String), String>;
 
     /// Get the next file matching the pattern. Returns the markdown AST.
     fn next(&mut self) -> Option<Self::Item> {
@@ -42,7 +42,7 @@ impl Iterator for MdWalker {
                     };
                     let ast = markdown::to_mdast(&content, &markdown::ParseOptions::default());
                     match ast {
-                        Ok(ast) => return Some(Ok((e.path().to_path_buf(), ast))),
+                        Ok(ast) => return Some(Ok((e.path().to_path_buf(), ast, content))),
                         Err(msg) => return Some(Err(msg.to_string())),
                     }
                 }
@@ -71,17 +71,17 @@ impl Indexer {
         let walker = MdWalker::new(path);
         for file in walker
             .into_iter()
-            .collect::<Vec<Result<(PathBuf, mdast::Node), String>>>()
+            .collect::<Vec<Result<(PathBuf, mdast::Node, String), String>>>()
             .iter()
             .progress()
         {
             let doc = match file {
-                Ok((path, ast)) => {
+                Ok((path, ast, content)) => {
                     let file = FileBuilder::new()
                         .with_path(path.clone())
                         .with_ast(ast.clone())
-                        .build()?;
-                    self.index_blocks(ast, file.id.clone(), path.clone())
+                        .build(content)?;
+                    self.index_blocks(ast, content, file.id.clone(), path.clone())
                         .await
                         .map_err(|e| e.to_string())?;
                     file
@@ -99,6 +99,7 @@ impl Indexer {
     async fn index_blocks(
         &self,
         ast: &mdast::Node,
+        content: &str,
         file_id: String,
         file_path: PathBuf,
     ) -> Result<(), String> {
@@ -109,7 +110,7 @@ impl Indexer {
                     .with_list_item(list_item.clone())
                     .with_file_id(file_id.clone())
                     .with_file_path(file_path.clone())
-                    .build()?;
+                    .build(content)?;
                 blocks
                     .add_documents(&new_blocks, Some("id"))
                     .await
