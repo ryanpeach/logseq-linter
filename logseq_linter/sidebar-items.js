@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["main"],"mod":["meilisearch"],"struct":["Args"]};
+window.SIDEBAR_ITEMS = {"fn":["main"],"mod":["indexer","meilisearch","parsing"],"struct":["Args"]};

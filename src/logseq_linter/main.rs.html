@@ -30,34 +30,44 @@
 <a href="#28" id="28">28</a>
 <a href="#29" id="29">29</a>
 <a href="#30" id="30">30</a>
+<a href="#31" id="31">31</a>
+<a href="#32" id="32">32</a>
+<a href="#33" id="33">33</a>
+<a href="#34" id="34">34</a>
+<a href="#35" id="35">35</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! The entry point of the program.
-</span><span class="attr">#![warn(missing_docs)]
-#![warn(clippy::missing_docs_in_private_items)]
+</span><span class="comment">// #![warn(missing_docs)]
+// #![warn(clippy::missing_docs_in_private_items)]
 
-</span><span class="kw">mod </span>meilisearch;
-<span class="kw">use </span>dotenv::dotenv;
+</span><span class="kw">mod </span>indexer;
+<span class="kw">mod </span>meilisearch;
+<span class="kw">mod </span>parsing;
+<span class="kw">use </span>std::path::PathBuf;
 
 <span class="kw">use </span>clap::{command, Parser};
+<span class="kw">use </span>dotenv::dotenv;
+<span class="kw">use </span>indexer::Indexer;
 
 <span class="doccomment">/// Simple program to greet a person
 </span><span class="attr">#[derive(Parser, Debug)]
 #[command(version, about, long_about = <span class="prelude-val">None</span>)]
 </span><span class="kw">struct </span>Args {
-    <span class="doccomment">/// Name of the person to greet
-    </span><span class="attr">#[arg(short, long)]
-    </span>name: String,
-
-    <span class="doccomment">/// Number of times to greet
-    </span><span class="attr">#[arg(short, long, default_value_t = <span class="number">1</span>)]
-    </span>count: u8,
+    <span class="doccomment">/// Input folder path
+    </span>path: PathBuf,
 }
 
-<span class="kw">fn </span>main() {
-    dotenv().ok();
-    <span class="kw">let </span>args = Args::parse();
+<span class="attr">#[tokio::main(flavor = <span class="string">"current_thread"</span>)]
+</span><span class="kw">async fn </span>main() {
+    <span class="comment">// Load environment variables from a .env file
+    </span>dotenv().ok();
 
-    <span class="kw">for _ in </span><span class="number">0</span>..args.count {
-        <span class="macro">println!</span>(<span class="string">"Hello {}!"</span>, args.name)
-    }
+    <span class="comment">// Load the files into the database
+    </span><span class="kw">let </span>args = Args::parse();
+
+    Indexer::new()
+        .<span class="kw">await
+        </span>.index_files(args.path.to_str().unwrap(), <span class="bool-val">true</span>)
+        .<span class="kw">await
+        </span>.unwrap();
 }
 </code></pre></div></section></main></body></html>

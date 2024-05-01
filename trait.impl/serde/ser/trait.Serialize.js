@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"logseq_linter":[["impl <a class=\"trait\" href=\"https://docs.rs/serde/1.0.199/serde/ser/trait.Serialize.html\" title=\"trait serde::ser::Serialize\">Serialize</a> for <a class=\"struct\" href=\"logseq_linter/parsing/file/struct.File.html\" title=\"struct logseq_linter::parsing::file::File\">File</a>"],["impl <a class=\"trait\" href=\"https://docs.rs/serde/1.0.199/serde/ser/trait.Serialize.html\" title=\"trait serde::ser::Serialize\">Serialize</a> for <a class=\"struct\" href=\"logseq_linter/parsing/block/struct.Block.html\" title=\"struct logseq_linter::parsing::block::Block\">Block</a>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
