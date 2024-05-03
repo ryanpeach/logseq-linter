@@ -327,7 +327,7 @@ mod tests {
         files_index.delete_all_documents().await.unwrap();
         Indexer::new().await.index_files(path, false).await.unwrap();
         let files = files_index.get_documents::<File>().await.unwrap().results;
-        assert!(files.len() > 0);
+        assert!(!files.is_empty());
 
         let file = files
             .into_iter()
