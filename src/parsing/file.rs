@@ -167,7 +167,7 @@ pub struct File {
 impl File {
     /// Add the block to the graph. Does not create links.
     pub fn add_to_graph(&self, graph: &mut UnGraph<GraphNode, ()>) {
-        let block_id = graph.add_node(GraphNode::File {
+        let _block_id = graph.add_node(GraphNode::File {
             id: self.id.clone(),
             title: Some(self.title.clone()),
         });

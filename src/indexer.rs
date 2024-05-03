@@ -5,7 +5,7 @@ use glob::Pattern;
 use indicatif::ProgressIterator;
 use markdown::mdast;
 use petgraph::graph::UnGraph;
-use petgraph::Graph;
+
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use walkdir::WalkDir;
