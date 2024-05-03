@@ -163,7 +163,6 @@ impl Indexer {
             match self.graph[node].clone() {
                 GraphNode::Block { id, .. } => block_ids.push(id),
                 GraphNode::File { id, .. } => file_ids.push(id),
-                _ => {}
             }
         }
 
@@ -322,20 +321,23 @@ mod tests {
 
     #[tokio::test]
     async fn test_index_files() {
-        let path = "graph/pages/tests___parsing___files___basic.md";
+        let path = "graph/pages/";
         let db = Meilisearch::new().await;
         let files_index = db.client.index("files");
         files_index.delete_all_documents().await.unwrap();
         Indexer::new().await.index_files(path, false).await.unwrap();
         let files = files_index.get_documents::<File>().await.unwrap().results;
-        assert_eq!(files.len(), 1);
+        assert!(files.len() > 0);
 
-        let file = files.get(0).unwrap();
+        let file = files
+            .into_iter()
+            .find(|f| f.path == "graph/pages/tests___parsing___files___basic.md")
+            .unwrap();
         assert_eq!(
             file,
-            &File {
+            File {
                 id: file.id.clone(),
-                path: path.to_string(),
+                path: "graph/pages/tests___parsing___files___basic.md".to_string(),
                 title: "tests/parsing/files/basic".to_string(),
                 properties: HashMap::from([("foo".to_string(), "bar".to_string())]),
                 wikilinks: vec!["wikilink".to_string()],

@@ -180,7 +180,10 @@ impl File {
                 GraphNode::File { id, .. } => id == &self.id,
                 _ => false,
             })
-            .ok_or(anyhow::anyhow!("No block found with the same id"))
+            .ok_or(anyhow::anyhow!(format!(
+                "No block found with the same id {}",
+                self.id
+            )))
     }
 
     /// Add the edges to the graph via wikilinks
@@ -203,7 +206,10 @@ impl File {
                     }
                     _ => false,
                 })
-                .ok_or(anyhow::anyhow!("No file found with the same title"))?;
+                .ok_or(anyhow::anyhow!(format!(
+                    "No file found with the same title {}",
+                    wikilink
+                )))?;
             graph.add_edge(file_id, block_id, ());
         }
         Ok(())
@@ -229,7 +235,10 @@ impl File {
                     }
                     _ => false,
                 })
-                .ok_or(anyhow::anyhow!("No tag found with the same title"))?;
+                .ok_or(anyhow::anyhow!(format!(
+                    "No tag found with the same title {}",
+                    tag
+                )))?;
             graph.add_edge(tag_id, block_id, ());
         }
         Ok(())
