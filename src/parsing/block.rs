@@ -1,11 +1,15 @@
 use std::{collections::HashMap, path::PathBuf};
 
+use anyhow::Result;
 use markdown::{
     mdast::{ListItem, Node},
     unist::Position,
 };
+use petgraph::graph::{NodeIndex, UnGraph};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
+
+use crate::indexer::GraphNode;
 
 pub struct BlockBuilder {
     file_id: Option<String>,
@@ -37,7 +41,7 @@ impl BlockBuilder {
         self
     }
 
-    fn get_slice(&self, content: &str, list_item: &ListItem) -> Result<String, String> {
+    fn get_slice(&self, content: &str, list_item: &ListItem) -> Result<String> {
         let position = list_item.position.as_ref().unwrap();
         let first_list_item_position: Option<Position> = list_item
             .children
@@ -129,7 +133,7 @@ impl BlockBuilder {
         tags
     }
 
-    pub fn build(self, content: &str, list_item: &ListItem) -> Result<Vec<Block>, String> {
+    pub fn build(self, content: &str, list_item: &ListItem) -> Result<Vec<Block>> {
         let slice = self.get_slice(content, list_item)?;
         let id = Self::get_id(&slice);
         let properties = Self::get_properties(&slice);
@@ -181,6 +185,107 @@ pub struct Block {
     pub tags: Vec<String>,
     /// The wikilinks in the block
     pub wikilinks: Vec<String>,
+}
+
+/// Graph methods
+impl Block {
+    /// Add the block to the graph. Does not create links.
+    pub fn add_to_graph(&self, graph: &mut UnGraph<GraphNode, ()>) {
+        graph.add_node(GraphNode::Block {
+            id: self.id.clone(),
+        });
+    }
+
+    fn get_node_index(&self, graph: &UnGraph<GraphNode, ()>) -> Result<NodeIndex> {
+        Ok(graph
+            .node_indices()
+            .find(|i| match &graph[*i] {
+                GraphNode::Block { id, .. } => id == &self.id,
+                _ => false,
+            })
+            .ok_or(anyhow::anyhow!("No block found with the same id"))?)
+    }
+
+    /// Add the edges to the graph via wikilinks
+    fn add_edges_wikilinks(
+        &self,
+        graph: &mut UnGraph<GraphNode, ()>,
+        block_id: NodeIndex,
+    ) -> Result<()> {
+        for wikilink in self.wikilinks.iter() {
+            // Find a File block with the same title
+            let file_id = graph
+                .node_indices()
+                .find(|i| match &graph[*i] {
+                    GraphNode::File { title, .. } => {
+                        if let Some(title) = title {
+                            title == wikilink
+                        } else {
+                            false
+                        }
+                    }
+                    _ => false,
+                })
+                .ok_or(anyhow::anyhow!("No file found with the same title"))?;
+            graph.add_edge(file_id, block_id, ());
+        }
+        Ok(())
+    }
+
+    /// Add the edges to the graph via tags
+    fn add_edges_tags(
+        &self,
+        graph: &mut UnGraph<GraphNode, ()>,
+        block_id: NodeIndex,
+    ) -> Result<()> {
+        for tag in self.tags.iter() {
+            // Find a Tag block with the same title
+            let tag_id = graph
+                .node_indices()
+                .find(|i| match &graph[*i] {
+                    GraphNode::File { title, .. } => {
+                        if let Some(title) = title {
+                            title == tag
+                        } else {
+                            false
+                        }
+                    }
+                    _ => false,
+                })
+                .ok_or(anyhow::anyhow!("No tag found with the same title"))?;
+            graph.add_edge(tag_id, block_id, ());
+        }
+        Ok(())
+    }
+
+    /// Add the edges to the graph via parent block id
+    fn add_edges_parent(
+        &self,
+        graph: &mut UnGraph<GraphNode, ()>,
+        block_id: NodeIndex,
+    ) -> Result<()> {
+        if let Some(parent_block_id) = &self.parent_block_id {
+            // Find a Block block with the same id
+            let parent_block_id = graph
+                .node_indices()
+                .find(|i| match &graph[*i] {
+                    GraphNode::Block { id, .. } => id == parent_block_id,
+                    _ => false,
+                })
+                .ok_or(anyhow::anyhow!("No block found with the same id"))?;
+            graph.add_edge(parent_block_id, block_id, ());
+        }
+        Ok(())
+    }
+
+    /// Add edges. Run this after adding all nodes to the graph.
+    pub fn add_edges(&self, graph: &mut UnGraph<GraphNode, ()>) -> Result<()> {
+        let block_id = self.get_node_index(graph)?;
+        self.add_edges_parent(graph, block_id)?;
+        self.add_edges_tags(graph, block_id)?;
+        self.add_edges_wikilinks(graph, block_id)?;
+        Ok(())
+    }
 }
 
 #[cfg(test)]

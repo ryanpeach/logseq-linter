@@ -3,9 +3,13 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use anyhow::Result;
 use markdown::mdast::Node;
+use petgraph::graph::{NodeIndex, UnGraph};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
+
+use crate::indexer::GraphNode;
 
 pub struct FileBuilder {
     path: Option<PathBuf>,
@@ -113,11 +117,11 @@ impl FileBuilder {
         file_name.replace(".md", "").replace("___", "/")
     }
 
-    pub fn build(mut self, content: &str, ast: &Node) -> Result<File, String> {
+    pub fn build(mut self, content: &str, ast: &Node) -> Result<File> {
         let path = self
             .path
             .as_ref()
-            .ok_or("No path".to_string())?
+            .ok_or(anyhow::anyhow!("You did not call with_path before build"))?
             .to_string_lossy()
             .to_string();
         let top_text = Self::get_top_text(ast);
@@ -126,11 +130,10 @@ impl FileBuilder {
         let wikilinks = Self::get_wikilinks(content);
         let tags = Self::get_tags(&top_text, content);
         let title = Self::get_title(
-            self.path
+            &self
+                .path
                 .take()
-                .ok_or("No path".to_string())
-                .as_ref()
-                .unwrap(),
+                .ok_or(anyhow::anyhow!("You did not call with_path before build"))?,
         );
         Ok(File {
             id,
@@ -158,6 +161,87 @@ pub struct File {
     pub wikilinks: Vec<String>,
     /// page tags
     pub tags: Vec<String>,
+}
+
+/// Graph methods
+impl File {
+    /// Add the block to the graph. Does not create links.
+    pub fn add_to_graph(&self, graph: &mut UnGraph<GraphNode, ()>) {
+        let block_id = graph.add_node(GraphNode::File {
+            id: self.id.clone(),
+            title: Some(self.title.clone()),
+        });
+    }
+
+    fn get_node_index(&self, graph: &UnGraph<GraphNode, ()>) -> Result<NodeIndex> {
+        Ok(graph
+            .node_indices()
+            .find(|i| match &graph[*i] {
+                GraphNode::File { id, .. } => id == &self.id,
+                _ => false,
+            })
+            .ok_or(anyhow::anyhow!("No block found with the same id"))?)
+    }
+
+    /// Add the edges to the graph via wikilinks
+    fn add_edges_wikilinks(
+        &self,
+        graph: &mut UnGraph<GraphNode, ()>,
+        block_id: NodeIndex,
+    ) -> Result<()> {
+        for wikilink in self.wikilinks.iter() {
+            // Find a File block with the same title
+            let file_id = graph
+                .node_indices()
+                .find(|i| match &graph[*i] {
+                    GraphNode::File { title, .. } => {
+                        if let Some(title) = title {
+                            title == wikilink
+                        } else {
+                            false
+                        }
+                    }
+                    _ => false,
+                })
+                .ok_or(anyhow::anyhow!("No file found with the same title"))?;
+            graph.add_edge(file_id, block_id, ());
+        }
+        Ok(())
+    }
+
+    /// Add the edges to the graph via tags
+    fn add_edges_tags(
+        &self,
+        graph: &mut UnGraph<GraphNode, ()>,
+        block_id: NodeIndex,
+    ) -> Result<()> {
+        for tag in self.tags.iter() {
+            // Find a Tag block with the same title
+            let tag_id = graph
+                .node_indices()
+                .find(|i| match &graph[*i] {
+                    GraphNode::File { title, .. } => {
+                        if let Some(title) = title {
+                            title == tag
+                        } else {
+                            false
+                        }
+                    }
+                    _ => false,
+                })
+                .ok_or(anyhow::anyhow!("No tag found with the same title"))?;
+            graph.add_edge(tag_id, block_id, ());
+        }
+        Ok(())
+    }
+
+    /// Add edges. Run this after adding all nodes to the graph.
+    pub fn add_edges(&self, graph: &mut UnGraph<GraphNode, ()>) -> Result<()> {
+        let block_id = self.get_node_index(graph)?;
+        self.add_edges_tags(graph, block_id)?;
+        self.add_edges_wikilinks(graph, block_id)?;
+        Ok(())
+    }
 }
 
 #[cfg(test)]

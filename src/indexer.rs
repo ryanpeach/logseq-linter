@@ -1,14 +1,18 @@
 //! Utilities for handling files and directories.
 
+use anyhow::Result;
 use glob::Pattern;
 use indicatif::ProgressIterator;
 use markdown::mdast;
+use petgraph::graph::UnGraph;
+use petgraph::Graph;
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use walkdir::WalkDir;
 
 use crate::meilisearch::Meilisearch;
-use crate::parsing::block::BlockBuilder;
-use crate::parsing::file::FileBuilder;
+use crate::parsing::block::{Block, BlockBuilder};
+use crate::parsing::file::{File, FileBuilder};
 
 /// Walks a directory tree and yields files matching a glob pattern.
 pub struct MdWalker {
@@ -29,7 +33,7 @@ impl MdWalker {
 }
 
 impl Iterator for MdWalker {
-    type Item = Result<(PathBuf, mdast::Node, String), String>;
+    type Item = Result<(PathBuf, mdast::Node, String)>;
 
     /// Get the next file matching the pattern. Returns the markdown AST.
     fn next(&mut self) -> Option<Self::Item> {
@@ -38,15 +42,15 @@ impl Iterator for MdWalker {
                 Ok(e) if self.pattern.matches_path(e.path()) => {
                     let content = match std::fs::read_to_string(e.path()) {
                         Ok(content) => content,
-                        Err(msg) => return Some(Err(msg.to_string())),
+                        Err(msg) => return Some(Err(msg.into())),
                     };
                     let ast = markdown::to_mdast(&content, &markdown::ParseOptions::default());
                     match ast {
                         Ok(ast) => return Some(Ok((e.path().to_path_buf(), ast, content))),
-                        Err(msg) => return Some(Err(msg.to_string())),
-                    }
+                        Err(msg) => return Some(Err(anyhow::Error::msg(msg.to_string()))),
+                    };
                 }
-                Err(msg) => return Some(Err(msg.to_string())),
+                Err(msg) => return Some(Err(msg.into())),
                 Ok(_) => continue,
             }
         }
@@ -54,25 +58,33 @@ impl Iterator for MdWalker {
     }
 }
 
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
+pub enum GraphNode {
+    File { id: String, title: Option<String> },
+    Block { id: String },
+}
+
 pub struct Indexer {
     pub db: Meilisearch,
+    pub graph: UnGraph<GraphNode, ()>,
 }
 
 impl Indexer {
     pub async fn new() -> Indexer {
         Indexer {
             db: Meilisearch::new().await,
+            graph: UnGraph::default(),
         }
     }
 
-    pub async fn index_files(&self, path: &str, index_blocks: bool) -> Result<(), String> {
+    pub async fn index_files(&mut self, path: &str, index_blocks: bool) -> Result<()> {
         // An index is where the documents are stored.
         let files = self.db.client.index("files");
         let walker = MdWalker::new(path);
         let mut tasks = vec![];
         for file in walker
             .into_iter()
-            .collect::<Vec<Result<(PathBuf, mdast::Node, String), String>>>()
+            .collect::<Vec<Result<(PathBuf, mdast::Node, String)>>>()
             .into_iter()
             .progress()
         {
@@ -81,36 +93,33 @@ impl Indexer {
                     let file = FileBuilder::new()
                         .with_path(path.clone())
                         .build(&content, &ast)?;
+                    file.add_to_graph(&mut self.graph);
                     if index_blocks {
                         self.index_blocks(&ast, &content, file.id.clone(), path)
-                            .await
-                            .map_err(|e| e.to_string())?;
+                            .await?;
                     }
                     file
                 }
-                Err(msg) => return Err(msg.to_string()),
+                Err(msg) => return Err(msg),
             };
-            let task = files
-                .add_documents(&[doc], Some("id"))
-                .await
-                .map_err(|e| e.to_string())?;
+            let task = files.add_documents(&[doc], Some("id")).await?;
             tasks.push(task);
         }
         for task in tasks {
             task.wait_for_completion(&self.db.client, None, None)
-                .await
-                .map_err(|e| e.to_string())?;
+                .await?;
         }
+        self.graph_link().await?;
         Ok(())
     }
 
     async fn index_blocks(
-        &self,
+        &mut self,
         ast: &mdast::Node,
         content: &str,
         file_id: String,
         file_path: PathBuf,
-    ) -> Result<(), String> {
+    ) -> Result<()> {
         let blocks_index = self.db.client.index("blocks");
         let mut tasks = vec![];
 
@@ -122,10 +131,10 @@ impl Indexer {
                             .with_file_id(file_id.clone())
                             .with_file_path(file_path.clone())
                             .build(content, list_item)?;
-                        let task_info = blocks_index
-                            .add_documents(&new_blocks, Some("id"))
-                            .await
-                            .map_err(|e| e.to_string())?;
+                        for block in new_blocks.iter() {
+                            block.add_to_graph(&mut self.graph)
+                        }
+                        let task_info = blocks_index.add_documents(&new_blocks, Some("id")).await?;
                         tasks.push(task_info);
                     }
                 }
@@ -134,25 +143,51 @@ impl Indexer {
                     .with_file_id(file_id.clone())
                     .with_file_path(file_path.clone())
                     .build(content, list_item)?;
-                let task_info = blocks_index
-                    .add_documents(&new_blocks, Some("id"))
-                    .await
-                    .map_err(|e| e.to_string())?;
+                let task_info = blocks_index.add_documents(&new_blocks, Some("id")).await?;
                 tasks.push(task_info);
             }
         }
         for task in tasks {
             task.wait_for_completion(&self.db.client, None, None)
-                .await
-                .map_err(|e| e.to_string())?;
+                .await?;
         }
+        Ok(())
+    }
+
+    async fn graph_link(&mut self) -> Result<()> {
+        // Collect all relevant node identifiers first
+        let mut block_ids = Vec::new();
+        let mut file_ids = Vec::new();
+
+        for node in self.graph.node_indices() {
+            match self.graph[node].clone() {
+                GraphNode::Block { id, .. } => block_ids.push(id),
+                GraphNode::File { id, .. } => file_ids.push(id),
+                _ => {}
+            }
+        }
+
+        // Process blocks
+        let blocks_index = self.db.client.index("blocks");
+        for id in block_ids {
+            let block: Block = blocks_index.get_document(&id).await?;
+            block.add_edges(&mut self.graph)?;
+        }
+
+        // Process files
+        let files_index = self.db.client.index("files");
+        for id in file_ids {
+            let file: File = files_index.get_document(&id).await?;
+            file.add_edges(&mut self.graph)?;
+        }
+
         Ok(())
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::parsing::file::File;
+    use crate::parsing::{block::Block, file::File};
 
     use super::*;
 
