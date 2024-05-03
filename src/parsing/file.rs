@@ -174,13 +174,13 @@ impl File {
     }
 
     fn get_node_index(&self, graph: &UnGraph<GraphNode, ()>) -> Result<NodeIndex> {
-        Ok(graph
+        graph
             .node_indices()
             .find(|i| match &graph[*i] {
                 GraphNode::File { id, .. } => id == &self.id,
                 _ => false,
             })
-            .ok_or(anyhow::anyhow!("No block found with the same id"))?)
+            .ok_or(anyhow::anyhow!("No block found with the same id"))
     }
 
     /// Add the edges to the graph via wikilinks
