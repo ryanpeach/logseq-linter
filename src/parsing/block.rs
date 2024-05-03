@@ -220,13 +220,9 @@ impl Block {
             let file_id = graph
                 .node_indices()
                 .find(|i| match &graph[*i] {
-                    GraphNode::File { title, .. } => {
-                        if let Some(title) = title {
-                            title == wikilink
-                        } else {
-                            false
-                        }
-                    }
+                    GraphNode::File {
+                        title: Some(title), ..
+                    } => title == wikilink,
                     _ => false,
                 })
                 .ok_or(anyhow::anyhow!(format!(
@@ -249,13 +245,9 @@ impl Block {
             let tag_id = graph
                 .node_indices()
                 .find(|i| match &graph[*i] {
-                    GraphNode::File { title, .. } => {
-                        if let Some(title) = title {
-                            title == tag
-                        } else {
-                            false
-                        }
-                    }
+                    GraphNode::File {
+                        title: Some(title), ..
+                    } => title == tag,
                     _ => false,
                 })
                 .ok_or(anyhow::anyhow!(format!(
